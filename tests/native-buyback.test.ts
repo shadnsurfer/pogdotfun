@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { DatabaseSync } from 'node:sqlite';
+import bs58 from 'bs58';
 import { createBuybackWorker } from '../server/agents/buyback.ts';
+import { publicAddresses } from '../server/treasury/public-addresses.ts';
 import type {
   BuybackOptions,
   NativeTransferRequest,
@@ -9,11 +11,11 @@ import type {
   PogBurnRequest,
 } from '../server/agents/buyback.ts';
 import type { FeeLot } from '../server/agents/pipeline.ts';
-const wallet = `0x${'11'.repeat(20)}` as const;
-const token = `0x${'22'.repeat(20)}` as const;
-const router = `0x${'33'.repeat(20)}` as const;
-const codeHash = `0x${'44'.repeat(32)}` as const;
-const tx = `0x${'55'.repeat(32)}` as const;
+const wallet = publicAddresses.buybackWallet;
+const token = bs58.encode(new Uint8Array(32).fill(22));
+const router = bs58.encode(new Uint8Array(32).fill(33));
+const tokenProgram = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
+const tx = bs58.encode(new Uint8Array(64).fill(55));
 const lot: FeeLot = {
   id: 'fee:buyback',
   tokenId: 'streamer-token',
@@ -38,21 +40,21 @@ function fixture() {
   const options: BuybackOptions = {
     enabled: true,
     target: {
-      chainId: 4663,
-      tokenAddress: token,
+      chain: 'solana',
+      mintAddress: token,
       devWallet: wallet,
-      tokenCodeHash: codeHash,
-      tokenDecimals: 18,
+      tokenProgramId: tokenProgram,
+      tokenDecimals: 9,
     },
     policy: {
       maxSlippageBps: 100,
       maxQuoteAgeMs: 30000,
-      maxTargetGasWei: '10',
-      minimumBuyWei: '10',
-      maximumBuyWei: '1000',
+      maxTargetFeeLamports: '10',
+      minimumBuyLamports: '10',
+      maximumBuyLamports: '1000',
       maxSourceAmountBaseUnits: { solana: '1000000000' },
       maxSourceGasBaseUnits: { solana: '1000' },
-      allowedRouters: [router],
+      allowedRouterPrograms: [router],
       maxJobsPerRun: 2,
     },
     transfers: {
@@ -65,9 +67,9 @@ function fixture() {
             sourceChain: request.lot.chain,
             sourceAsset: request.lot.asset,
             sourceAmountBaseUnits: request.lot.amountBaseUnits,
-            destinationChainId: 4663,
+            destinationChain: 'solana',
             recipient: wallet,
-            expectedEthWei: '1000',
+            expectedSolLamports: '1000',
           };
         },
         async submit(request) {
@@ -89,11 +91,11 @@ function fixture() {
             sourceAmountBaseUnits: request.lot.amountBaseUnits,
             sourceDebitBaseUnits: request.lot.amountBaseUnits,
             sourceGasBaseUnits: '100',
-            sourceTransactionHash: 'solana-final-signature',
-            destinationChainId: 4663,
+            sourceTransactionId: tx,
+            destinationChain: 'solana',
             recipient: wrongTransfer ? token : wallet,
-            ethAmountWei: '1000',
-            destinationTransactionHash: tx,
+            solAmountLamports: '1000',
+            destinationSignature: tx,
             evidenceId: 'bridge-final-evidence',
           };
         },
@@ -108,11 +110,11 @@ function fixture() {
           id: 'swap-quote',
           quotedAt: Date.now(),
           expiresAt: Date.now() + 20000,
-          chainId: 4663,
-          tokenAddress: token,
+          chain: 'solana',
+          mintAddress: token,
           recipient: wallet,
-          routerAddress: router,
-          inputEthWei: request.inputEthWei,
+          routerProgramId: router,
+          inputSolLamports: request.inputSolLamports,
           expectedTokenBaseUnits: '500',
         };
       },
@@ -125,17 +127,17 @@ function fixture() {
         return {
           operationId: request.operationId,
           finalized: true,
-          chainId: 4663,
-          tokenAddress: token,
-          tokenCodeHash: codeHash,
-          tokenDecimals: 18,
+          chain: 'solana',
+          mintAddress: token,
+          tokenProgramId: tokenProgram,
+          tokenDecimals: 9,
           from: wallet,
           recipient: wallet,
-          routerAddress: router,
-          ethSpentWei: request.inputEthWei,
-          gasWei: '5',
+          routerProgramId: router,
+          solSpentLamports: request.inputSolLamports,
+          feeLamports: '5',
           tokenAmountBaseUnits: '500',
-          transactionHash: `0x${'66'.repeat(32)}`,
+          signature: bs58.encode(new Uint8Array(64).fill(66)),
           evidenceId: 'swap-final-evidence',
         };
       },
@@ -150,17 +152,18 @@ function fixture() {
         return {
           operationId: request.operationId,
           finalized: true,
-          chainId: 4663,
-          tokenAddress: token,
-          tokenCodeHash: codeHash,
+          chain: 'solana',
+          mintAddress: token,
+          tokenProgramId: tokenProgram,
+          instruction: 'BurnChecked',
           from: wallet,
           amountBaseUnits: request.tokenAmountBaseUnits,
           totalSupplyBefore: '10000',
           totalSupplyAfter: fakeBurn ? '10000' : '9500',
           walletBalanceBefore: '500',
           walletBalanceAfter: '0',
-          gasWei: '5',
-          transactionHash: `0x${'77'.repeat(32)}`,
+          feeLamports: '5',
+          signature: bs58.encode(new Uint8Array(64).fill(77)),
           evidenceId: 'burn-final-evidence',
         };
       },
@@ -190,7 +193,7 @@ function fixture() {
 async function cycle(worker: ReturnType<typeof createBuybackWorker>, n = 6) {
   for (let i = 0; i < n; i++) await worker.runOnce();
 }
-test('native20% lot is routed into actual ETH, purchased and supply burned with residual retained', async () => {
+test('native 20% lot is routed into SOL, purchased and supply burned with residual retained', async () => {
   const f = fixture();
   f.worker.recordClaim(lot);
   await cycle(f.worker);
@@ -198,11 +201,11 @@ test('native20% lot is routed into actual ETH, purchased and supply burned with 
   assert.equal(job.phase, 'completed');
   assert.deepEqual(f.counts, [1, 1, 1]);
   assert.equal(job.amountBaseUnits, lot.amountBaseUnits);
-  assert.equal(job.receivedEthWei, '1000');
-  assert.equal(job.ethSpentWei, '980');
+  assert.equal(job.receivedSolLamports, '1000');
+  assert.equal(job.solSpentLamports, '980');
   assert.equal(job.burnedTokenBaseUnits, '500');
-  assert.equal(job.residualEthWei, '10');
-  assert.equal(job.targetGasSpentWei, '10');
+  assert.equal(job.residualSolLamports, '10');
+  assert.equal(job.targetFeesSpentLamports, '10');
   assert.equal(job.residualTokenBaseUnits, '0');
   assert.equal(f.requests.swapRequest?.minimumTokenBaseUnits, '495');
   f.db.close();
@@ -250,6 +253,20 @@ test('wrong destination and unchanged supply never advance financial state', asy
   assert.equal(g.worker.list()[0].burnedTokenBaseUnits, undefined);
   g.db.close();
 });
+test('a transfer labeled as a burn cannot complete the Solana supply-burn stage', async () => {
+  const f = fixture();
+  const burn = f.options.burn!;
+  const reconcile = burn.reconcile;
+  burn.reconcile = async (request) => ({
+    ...(await reconcile(request))!,
+    instruction: 'TransferChecked' as 'BurnChecked',
+  });
+  f.worker.recordClaim(lot);
+  await cycle(f.worker);
+  assert.equal(f.worker.list()[0].phase, 'burning');
+  assert.equal(f.worker.list()[0].burnedTokenBaseUnits, undefined);
+  f.db.close();
+});
 test('source allocation replay and repeated claim evidence cannot double fund a buyback', () => {
   const f = fixture();
   f.worker.recordClaim(lot);
@@ -266,7 +283,7 @@ test('unfinalized evidence and low swap output remain held without quote credit'
   transfer.reconcile = async (request) => ({ ...(await original(request))!, finalized: false });
   f.worker.recordClaim(lot);
   await cycle(f.worker);
-  assert.equal(f.worker.list()[0].receivedEthWei, undefined);
+  assert.equal(f.worker.list()[0].receivedSolLamports, undefined);
   assert.equal(f.counts[1], 0);
   f.db.close();
   const g = fixture();
@@ -304,7 +321,7 @@ test('malformed runtime bindings hold before source submission', async () => {
   assert.deepEqual(f.counts, [0, 0, 0]);
   f.db.close();
 });
-test('case variants of an EVM payout hash cannot credit two native allocations', async () => {
+test('the same Solana destination signature cannot credit two native allocations', async () => {
   const f = fixture();
   const transfer = f.options.transfers.solana!;
   const original = transfer.reconcile;
@@ -313,8 +330,10 @@ test('case variants of an EVM payout hash cannot credit two native allocations',
     return {
       ...result,
       evidenceId: request.operationId,
-      sourceTransactionHash: request.operationId,
-      destinationTransactionHash: `0x${(request.lot.id === lot.id ? 'ab' : 'AB').repeat(32)}`,
+      sourceTransactionId: bs58.encode(
+        new Uint8Array(64).fill(request.lot.id === lot.id ? 41 : 42),
+      ),
+      destinationSignature: tx,
     };
   };
   f.worker.recordClaim(lot);
@@ -334,7 +353,7 @@ test('truthy malformed finality is never financial evidence', async () => {
   });
   f.worker.recordClaim(lot);
   await cycle(f.worker);
-  assert.equal(f.worker.list()[0].receivedEthWei, undefined);
+  assert.equal(f.worker.list()[0].receivedSolLamports, undefined);
   assert.equal(f.counts[1], 0);
   f.db.close();
 });
@@ -363,7 +382,7 @@ test('source debit including gas can never consume more than the native20% alloc
   });
   f.worker.recordClaim(lot);
   await cycle(f.worker);
-  assert.equal(f.worker.list()[0].receivedEthWei, undefined);
+  assert.equal(f.worker.list()[0].receivedSolLamports, undefined);
   assert.equal(f.counts[1], 0);
   f.db.close();
 });
@@ -384,7 +403,7 @@ test('the official POG target is durably pinned across worker restarts', () => {
     () =>
       createBuybackWorker(f.db, {
         ...f.options,
-        target: { ...f.options.target, tokenAddress: router },
+        target: { ...f.options.target, mintAddress: router },
       }),
     /target.*binding|official.*target/i,
   );
@@ -394,7 +413,7 @@ test('the official POG target is durably pinned across worker restarts', () => {
         ...f.options,
         target: { ...f.options.target, devWallet: router },
       }),
-    /target.*binding|official.*target/i,
+    /target.*binding|official.*target|published buyback wallet/i,
   );
   assert.deepEqual(f.counts, [0, 0, 0]);
   f.db.close();

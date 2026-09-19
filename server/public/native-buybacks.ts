@@ -7,8 +7,8 @@ export interface PublicPlatformToken extends PlatformIdentity {
   id: 'platform-pog';
   name: 'Pog';
   symbol: 'POG';
-  ethSpentWei: string;
-  targetGasSpentWei: string;
+  solSpentLamports: string;
+  targetFeesSpentLamports: string;
   burnedTokenBaseUnits: string;
   buybackCount: number;
   burnCount: number;
@@ -27,10 +27,10 @@ export interface PublicNativeBuybackLedger {
     sourceSpentBaseUnits: string;
     residualSourceBaseUnits: string;
   }>;
-  receivedEthWei: string;
-  ethSpentWei: string;
-  targetGasSpentWei: string;
-  residualEthWei: string;
+  receivedSolLamports: string;
+  solSpentLamports: string;
+  targetFeesSpentLamports: string;
+  residualSolLamports: string;
   purchasedTokenBaseUnits: string;
   burnedTokenBaseUnits: string;
   residualTokenBaseUnits: string;
@@ -43,8 +43,8 @@ export interface PublicNativeBuybackLedger {
     sourceAsset: FeeLot['asset'];
     sourceAmountBaseUnits: string;
     phase: BuybackJob['phase'];
-    receivedEthWei: string | null;
-    ethSpentWei: string | null;
+    receivedSolLamports: string | null;
+    solSpentLamports: string | null;
     burnedTokenBaseUnits: string | null;
     sourceTransferReference: string | null;
     transferReference: string | null;
@@ -76,10 +76,10 @@ function reference(value: unknown): string {
 function targetIdentity(target: BuybackTarget): string {
   if (!validPlatformTarget(target)) invalid();
   return JSON.stringify([
-    target.chainId,
-    target.tokenAddress.toLowerCase(),
-    target.devWallet.toLowerCase(),
-    target.tokenCodeHash.toLowerCase(),
+    target.chain,
+    target.mintAddress,
+    target.devWallet,
+    target.tokenProgramId,
     target.tokenDecimals,
   ]);
 }
@@ -155,10 +155,10 @@ export function projectNativeBuybacks<T extends object>(
   const ledger: PublicNativeBuybackLedger = {
     allocationVersion: 'native-streamer-v1',
     sources: [...sources.values()],
-    receivedEthWei: '0',
-    ethSpentWei: '0',
-    targetGasSpentWei: '0',
-    residualEthWei: '0',
+    receivedSolLamports: '0',
+    solSpentLamports: '0',
+    targetFeesSpentLamports: '0',
+    residualSolLamports: '0',
     purchasedTokenBaseUnits: '0',
     burnedTokenBaseUnits: '0',
     residualTokenBaseUnits: '0',
@@ -174,10 +174,10 @@ export function projectNativeBuybacks<T extends object>(
   let verifiedTarget: BuybackTarget | undefined;
   const sum = (
     key:
-      | 'receivedEthWei'
-      | 'ethSpentWei'
-      | 'targetGasSpentWei'
-      | 'residualEthWei'
+      | 'receivedSolLamports'
+      | 'solSpentLamports'
+      | 'targetFeesSpentLamports'
+      | 'residualSolLamports'
       | 'purchasedTokenBaseUnits'
       | 'burnedTokenBaseUnits'
       | 'residualTokenBaseUnits',
@@ -203,14 +203,14 @@ export function projectNativeBuybacks<T extends object>(
     const bought = ['bought', 'burning', 'completed'].includes(job.phase),
       funded = ['funded', 'buying', 'bought', 'burning', 'completed'].includes(job.phase),
       completed = job.phase === 'completed';
-    const received = funded ? units(job.receivedEthWei) : 0n;
+    const received = funded ? units(job.receivedSolLamports) : 0n;
     if (funded && received <= 0n) invalid();
     if (funded) {
-      const transferProof = reference(job.transferReference).toLowerCase();
+      const transferProof = reference(job.transferReference);
       if (proofs.has(transferProof)) invalid();
       proofs.add(transferProof);
       reference(job.sourceTransferReference);
-      sum('receivedEthWei', received);
+      sum('receivedSolLamports', received);
       const sourceSpent = units(job.sourceSpentBaseUnits),
         sourceResidual = units(job.residualSourceBaseUnits);
       if (sourceSpent <= 0n || sourceSpent + sourceResidual !== units(job.amountBaseUnits))
@@ -233,18 +233,19 @@ export function projectNativeBuybacks<T extends object>(
         verifiedAt && Date.parse(verifiedAt) > Date.parse(job.targetVerifiedAt)
           ? verifiedAt
           : job.targetVerifiedAt;
-      spent = units(job.ethSpentWei);
-      const residual = units(job.residualEthWei),
+      spent = units(job.solSpentLamports);
+      const residual = units(job.residualSolLamports),
         purchased = units(job.purchasedTokenBaseUnits);
-      const gas = units(job.targetGasSpentWei);
-      if (gas !== units(job.swapGasWei) + (completed ? units(job.burnGasWei) : 0n)) invalid();
+      const gas = units(job.targetFeesSpentLamports);
+      if (gas !== units(job.swapFeeLamports) + (completed ? units(job.burnFeeLamports) : 0n))
+        invalid();
       if (spent <= 0n || purchased <= 0n || spent + gas + residual !== received) invalid();
-      sum('targetGasSpentWei', gas);
+      sum('targetFeesSpentLamports', gas);
       const proof = reference(job.buyReference);
-      if (proofs.has(proof.toLowerCase())) invalid();
-      proofs.add(proof.toLowerCase());
-      sum('ethSpentWei', spent);
-      sum('residualEthWei', residual);
+      if (proofs.has(proof)) invalid();
+      proofs.add(proof);
+      sum('solSpentLamports', spent);
+      sum('residualSolLamports', residual);
       sum('purchasedTokenBaseUnits', purchased);
       ledger.buybackCount++;
       if (completed) {
@@ -252,8 +253,8 @@ export function projectNativeBuybacks<T extends object>(
         const remainder = units(job.residualTokenBaseUnits);
         if (burned <= 0n || burned + remainder !== purchased || !time(job.completedAt)) invalid();
         const proof = reference(job.burnReference);
-        if (proofs.has(proof.toLowerCase())) invalid();
-        proofs.add(proof.toLowerCase());
+        if (proofs.has(proof)) invalid();
+        proofs.add(proof);
         sum('burnedTokenBaseUnits', burned);
         sum('residualTokenBaseUnits', remainder);
         ledger.burnCount++;
@@ -262,15 +263,15 @@ export function projectNativeBuybacks<T extends object>(
             ? lastExecutionAt
             : job.completedAt;
       } else sum('residualTokenBaseUnits', purchased);
-    } else if (funded) sum('residualEthWei', received);
+    } else if (funded) sum('residualSolLamports', received);
     ledger.receipts.push({
       id: job.id,
       sourceChain: job.chain,
       sourceAsset: job.asset,
       sourceAmountBaseUnits: job.amountBaseUnits,
       phase: job.phase,
-      receivedEthWei: funded ? String(received) : null,
-      ethSpentWei: spent === null ? null : String(spent),
+      receivedSolLamports: funded ? String(received) : null,
+      solSpentLamports: spent === null ? null : String(spent),
       burnedTokenBaseUnits: burned === null ? null : String(burned),
       sourceTransferReference: funded ? reference(job.sourceTransferReference) : null,
       transferReference: funded ? reference(job.transferReference) : null,
@@ -285,15 +286,14 @@ export function projectNativeBuybacks<T extends object>(
           id: 'platform-pog',
           name: 'Pog',
           symbol: 'POG',
-          chain: 'robinhood',
-          chainId: 4663,
-          address: verifiedTarget.tokenAddress,
+          chain: 'solana',
+          address: verifiedTarget.mintAddress,
           devWallet: verifiedTarget.devWallet,
-          tokenCodeHash: verifiedTarget.tokenCodeHash,
+          tokenProgramId: verifiedTarget.tokenProgramId,
           tokenDecimals: verifiedTarget.tokenDecimals,
           verifiedAt,
-          ethSpentWei: ledger.ethSpentWei,
-          targetGasSpentWei: ledger.targetGasSpentWei,
+          solSpentLamports: ledger.solSpentLamports,
+          targetFeesSpentLamports: ledger.targetFeesSpentLamports,
           burnedTokenBaseUnits: ledger.burnedTokenBaseUnits,
           buybackCount: ledger.buybackCount,
           burnCount: ledger.burnCount,
@@ -315,8 +315,7 @@ export function projectNativeBuybacks<T extends object>(
     platformToken,
     nativeBuybackLedger: ledger,
     officialPlatformIntent: {
-      chain: 'robinhood' as const,
-      chainId: 4663 as const,
+      chain: 'solana' as const,
       status: !context.target
         ? ('unconfigured' as const)
         : platformToken

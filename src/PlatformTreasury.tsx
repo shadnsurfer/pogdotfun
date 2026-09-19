@@ -1,5 +1,6 @@
 import type { PlatformToken } from './data';
 import type { PublicNativeBuybackLedger } from '../server/public/native-buybacks';
+import { publicAddresses } from '../server/treasury/public-addresses';
 import './platform-treasury.css';
 const units = (value: string, decimals: number) => {
   if (
@@ -25,26 +26,59 @@ export function PlatformTreasury({
     <section className="tv-treasury platform-treasury" aria-label="Official token">
       <div className="section-heading">
         <h2>Official $POG token</h2>
-        <span>Robinhood Chain · 4663</span>
+        <span>Solana</span>
+      </div>
+      <div className="platform-addresses">
+        <p>Published vault addresses for public inspection:</p>
+        <p>
+          Solana:{' '}
+          <a href={`https://solscan.io/account/${publicAddresses.vaults.solana}`}>
+            <code>{publicAddresses.vaults.solana}</code>
+          </a>
+        </p>
+        <p>
+          BNB Chain:{' '}
+          <a href={`https://bscscan.com/address/${publicAddresses.vaults.bnb}`}>
+            <code>{publicAddresses.vaults.bnb}</code>
+          </a>
+        </p>
+        <p>
+          Robinhood Chain:{' '}
+          <a
+            href={`https://robinhoodchain.blockscout.com/address/${publicAddresses.vaults.robinhood}`}
+          >
+            <code>{publicAddresses.vaults.robinhood}</code>
+          </a>
+        </p>
+        <p>
+          Solana buyback and burn wallet:{' '}
+          <a href={`https://solscan.io/account/${publicAddresses.buybackWallet}`}>
+            <code>{publicAddresses.buybackWallet}</code>
+          </a>
+        </p>
+        <small>
+          Wallet activity is public; a supply burn requires a verified token-program burn
+          transaction.
+        </small>
       </div>
       {token ? (
         <>
           <div className="platform-addresses">
             <p>
-              Verified token <code>{token.address}</code>
+              Verified mint <code>{token.address}</code>
             </p>
             <p>
-              Dev wallet <code>{token.devWallet}</code>
+              Buyback and burn wallet <code>{token.devWallet}</code>
             </p>
           </div>
           <p className="tv-treasury-note">
-            Target binding verified against a confirmed purchase on Robinhood Chain. Amounts below
+            Mint and signer binding verified against a confirmed purchase on Solana. Amounts below
             come from confirmed execution.
           </p>
           <div className="tv-treasury-metrics">
             {[
-              ['Spent on buybacks', `${units(token.ethSpentWei, 18)} ETH`],
-              ['Buyback and burn gas', `${units(token.targetGasSpentWei, 18)} ETH`],
+              ['Spent on buybacks', `${units(token.solSpentLamports, 9)} SOL`],
+              ['Buyback and burn fees', `${units(token.targetFeesSpentLamports, 9)} SOL`],
               ['Confirmed buybacks', String(token.buybackCount)],
               ['Confirmed burns', String(token.burnCount)],
               ['$POG burned', units(token.burnedTokenBaseUnits, token.tokenDecimals)],
@@ -58,15 +92,15 @@ export function PlatformTreasury({
         </>
       ) : (
         <p>
-          The official POG target has not been verified. Its address and dev wallet will appear
+          The official POG mint has not been verified. The mint and execution totals will appear
           after a confirmed purchase verifies the target binding.
         </p>
       )}
       <h3>Native creator-fee allocation</h3>
       <p className="tv-treasury-note">
         Each confirmed fee lot splits before conversion: 80% supports its streamer; 20% funds POG
-        buybacks and burns on Robinhood Chain. The buyback share keeps its original asset until a
-        confirmed transfer. No USD valuation is assigned to it.
+        buybacks and burns on Solana. The buyback share keeps its original asset until a confirmed
+        transfer. No USD valuation is assigned to it.
       </p>
       {ledger?.sources.length ? (
         <div className="tv-treasury-metrics">
@@ -105,11 +139,11 @@ export function PlatformTreasury({
         <div className="tv-treasury-metrics">
           <div>
             <span>Confirmed destination funds</span>
-            <strong>{units(ledger.receivedEthWei, 18)} ETH</strong>
+            <strong>{units(ledger.receivedSolLamports, 9)} SOL</strong>
           </div>
           <div>
-            <span>Destination ETH residual held</span>
-            <strong>{units(ledger.residualEthWei, 18)} ETH</strong>
+            <span>Destination SOL residual held</span>
+            <strong>{units(ledger.residualSolLamports, 9)} SOL</strong>
           </div>
           <div>
             <span>Unburned POG held</span>

@@ -322,8 +322,8 @@ export function createApp(
           ...token,
           image: publicServices.imageAssetUrl(token.image),
         }));
-        // This market reader is Solana-specific. Official Robinhood $POG evidence
-        // comes from the treasury projection, never a Solana mint lookup.
+        // Official $POG identity comes from verified treasury execution,
+        // not an unbound Solana market lookup.
         const market = marketData.snapshot(catalogTokens);
         json(response, 200, {
           ...catalog,

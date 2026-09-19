@@ -1,19 +1,20 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import bs58 from 'bs58';
 import * as catalog from '../src/data.ts';
+import { publicAddresses } from '../server/treasury/public-addresses.ts';
 const platform = () => ({
   id: 'platform-pog',
   name: 'Pog',
   symbol: 'POG',
-  chain: 'robinhood',
-  chainId: 4663,
-  address: `0x${'1'.repeat(40)}`,
-  devWallet: `0x${'2'.repeat(40)}`,
-  tokenCodeHash: `0x${'3'.repeat(64)}`,
-  tokenDecimals: 18,
+  chain: 'solana',
+  address: bs58.encode(new Uint8Array(32).fill(11)),
+  devWallet: publicAddresses.buybackWallet,
+  tokenProgramId: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
+  tokenDecimals: 9,
   verifiedAt: '2026-09-18T12:00:00Z',
-  ethSpentWei: '12345678901234567890',
-  targetGasSpentWei: '1000000000000000',
+  solSpentLamports: '12345678901234567890',
+  targetFeesSpentLamports: '1000000',
   burnedTokenBaseUnits: '9999999999999999999999',
   buybackCount: 1,
   burnCount: 1,
@@ -34,7 +35,7 @@ const payload = (platformToken: unknown) => ({
     streamerCount: 0,
   },
 });
-test('verified EVM identity and native amounts remain exact and separate from community token prices', async () => {
+test('verified Solana identity and native amounts remain exact and separate from community token prices', async () => {
   const fetch = globalThis.fetch;
   try {
     globalThis.fetch = async () => Response.json(payload(platform()));
@@ -54,15 +55,15 @@ test('invalid official native amounts or identity retain the previous catalog sn
     const saved = catalog.platformToken,
       treasury = catalog.treasury;
     for (const change of [
-      { chain: 'solana' },
-      { chainId: 1 },
-      { address: 'So11111111111111111111111111111111111111112' },
+      { chain: 'robinhood' },
+      { address: `0x${'1'.repeat(40)}` },
       { devWallet: 'invalid' },
-      { tokenCodeHash: '0x00' },
-      { ethSpentWei: 123 },
-      { ethSpentWei: '1e6' },
+      { devWallet: bs58.encode(new Uint8Array(32).fill(12)) },
+      { tokenProgramId: '0x00' },
+      { solSpentLamports: 123 },
+      { solSpentLamports: '1e6' },
       { burnedTokenBaseUnits: '-1' },
-      { tokenDecimals: 37 },
+      { tokenDecimals: 19 },
       { burnCount: 1.5 },
       { verifiedAt: 'bad' },
     ]) {

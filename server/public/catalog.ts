@@ -298,7 +298,7 @@ export function publicCatalog(
   const pendingCents = t.availableCents + t.reservedCents + t.cardResidualCents;
   const reserve = treasury?.buybackReserveUsdCents ?? t.buybackCents;
   const sources = [...snapshot.tokens, ...(snapshot.platformTokens ?? [])];
-  // Historical Solana treasury registrations never establish official Robinhood POG identity.
+  // Historical treasury registrations alone cannot establish official POG identity.
   const platformToken: PublicPlatformToken | null = null;
   return {
     tokens,

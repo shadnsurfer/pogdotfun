@@ -1,25 +1,26 @@
 import { createHash } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
-import { isAddress } from 'viem';
-import type { Address, Hex } from 'viem';
+import bs58 from 'bs58';
+import { validSolanaAddress } from '../treasury/platform-identity.ts';
+import { publicAddresses } from '../treasury/public-addresses.ts';
 import type { FeeLot } from './pipeline.ts';
 
 export interface BuybackTarget {
-  chainId: 4663;
-  tokenAddress: Address;
-  devWallet: Address;
-  tokenCodeHash: Hex;
+  chain: 'solana';
+  mintAddress: string;
+  devWallet: string;
+  tokenProgramId: string;
   tokenDecimals: number;
 }
 export interface BuybackPolicy {
   maxSlippageBps: number;
   maxQuoteAgeMs: number;
-  maxTargetGasWei: string;
-  minimumBuyWei: string;
-  maximumBuyWei: string;
+  maxTargetFeeLamports: string;
+  minimumBuyLamports: string;
+  maximumBuyLamports: string;
   maxSourceAmountBaseUnits: Partial<Record<FeeLot['chain'], string>>;
   maxSourceGasBaseUnits: Partial<Record<FeeLot['chain'], string>>;
-  allowedRouters: Address[];
+  allowedRouterPrograms: string[];
   maxJobsPerRun?: number;
 }
 export interface NativeTransferQuote {
@@ -29,16 +30,16 @@ export interface NativeTransferQuote {
   sourceChain: FeeLot['chain'];
   sourceAsset: FeeLot['asset'];
   sourceAmountBaseUnits: string;
-  destinationChainId: 4663;
-  recipient: Address;
-  expectedEthWei: string;
+  destinationChain: 'solana';
+  recipient: string;
+  expectedSolLamports: string;
 }
 export interface NativeTransferRequest {
   operationId: string;
   lot: FeeLot;
   target: BuybackTarget;
   quote: NativeTransferQuote;
-  minimumEthOutWei: string;
+  minimumSolOutLamports: string;
   maxSourceGasBaseUnits: string;
 }
 export interface NativeTransferEvidence {
@@ -51,11 +52,11 @@ export interface NativeTransferEvidence {
   /** Total allocation debit INCLUDING source gas and route fees. Must not exceed the child lot. */
   sourceDebitBaseUnits: string;
   sourceGasBaseUnits: string;
-  sourceTransactionHash: string;
-  destinationChainId: 4663;
-  recipient: Address;
-  ethAmountWei: string;
-  destinationTransactionHash: Hex;
+  sourceTransactionId: string;
+  destinationChain: 'solana';
+  recipient: string;
+  solAmountLamports: string;
+  destinationSignature: string;
   evidenceId: string;
 }
 export interface NativeBuybackTransferAdapter {
@@ -68,47 +69,47 @@ export interface NativeBuybackTransferAdapter {
   }): Promise<NativeTransferQuote>;
   /** Persist signed bytes/nonces BEFORE broadcasting. Idempotency is operationId, across restarts. */
   submit(request: NativeTransferRequest): Promise<{ reference: string }>;
-  /** Must verify both finalized source debit and actual native ETH credit, never a bridge quote. */
+  /** Must verify both finalized source debit and actual Solana SOL credit, never a bridge quote. */
   reconcile(request: NativeTransferRequest): Promise<NativeTransferEvidence | null>;
 }
 export interface PogSwapQuote {
   id: string;
   quotedAt: number;
   expiresAt: number;
-  chainId: 4663;
-  tokenAddress: Address;
-  recipient: Address;
-  routerAddress: Address;
-  inputEthWei: string;
+  chain: 'solana';
+  mintAddress: string;
+  recipient: string;
+  routerProgramId: string;
+  inputSolLamports: string;
   expectedTokenBaseUnits: string;
 }
 export interface PogSwapRequest {
   operationId: string;
   target: BuybackTarget;
-  inputEthWei: string;
+  inputSolLamports: string;
   quote: PogSwapQuote;
   minimumTokenBaseUnits: string;
-  maxGasWei: string;
+  maxFeeLamports: string;
 }
 export interface PogSwapEvidence {
   operationId: string;
   finalized: boolean;
-  chainId: 4663;
-  tokenAddress: Address;
-  tokenCodeHash: Hex;
+  chain: 'solana';
+  mintAddress: string;
+  tokenProgramId: string;
   tokenDecimals: number;
-  from: Address;
-  recipient: Address;
-  routerAddress: Address;
-  ethSpentWei: string;
-  gasWei: string;
+  from: string;
+  recipient: string;
+  routerProgramId: string;
+  solSpentLamports: string;
+  feeLamports: string;
   tokenAmountBaseUnits: string;
-  transactionHash: Hex;
+  signature: string;
   evidenceId: string;
 }
 export interface VerifiedBuybackTarget extends BuybackTarget {
   verified: true;
-  signerAddress: Address;
+  signerAddress: string;
   observedAt: number;
 }
 export interface PogSwapAdapter {
@@ -117,38 +118,40 @@ export interface PogSwapAdapter {
   quote(request: {
     operationId: string;
     target: BuybackTarget;
-    inputEthWei: string;
+    inputSolLamports: string;
     maxSlippageBps: number;
   }): Promise<PogSwapQuote>;
-  /** Enforce pinned router, chain, calldata recipient/minimum output/gas. Journal before broadcast. */
+  /** Enforce pinned router program, mint, recipient/minimum output/fee. Journal before broadcast. */
   submit(request: PogSwapRequest): Promise<{ reference: string }>;
   reconcile(request: PogSwapRequest): Promise<PogSwapEvidence | null>;
 }
 export interface PogBurnRequest {
   operationId: string;
   target: BuybackTarget;
+  instruction: 'BurnChecked';
   tokenAmountBaseUnits: string;
-  maxGasWei: string;
+  maxFeeLamports: string;
 }
 export interface PogBurnEvidence {
   operationId: string;
   finalized: boolean;
-  chainId: 4663;
-  tokenAddress: Address;
-  tokenCodeHash: Hex;
-  from: Address;
+  chain: 'solana';
+  mintAddress: string;
+  tokenProgramId: string;
+  instruction: 'BurnChecked';
+  from: string;
   amountBaseUnits: string;
   totalSupplyBefore: string;
   totalSupplyAfter: string;
   walletBalanceBefore: string;
   walletBalanceAfter: string;
-  gasWei: string;
-  transactionHash: Hex;
+  feeLamports: string;
+  signature: string;
   evidenceId: string;
 }
 export interface PogBurnAdapter {
-  /** Bind an actually supported supply-reducing method. A transfer to a sink is insufficient.
-   * Verify the target deployment/implementation and journal signed bytes before broadcasting. */
+  /** Bind an SPL BurnChecked instruction for the pinned mint and token program.
+   * Verify mint/account ownership and journal signed bytes before broadcasting. */
   submit(request: PogBurnRequest): Promise<{ reference: string }>;
   /** Transaction-attributed state deltas, not unrelated block-wide before/after readings. */
   reconcile(request: PogBurnRequest): Promise<PogBurnEvidence | null>;
@@ -170,12 +173,12 @@ export interface BuybackJob extends FeeLot {
   targetVerifiedAt?: string;
   sourceSpentBaseUnits?: string;
   residualSourceBaseUnits?: string;
-  receivedEthWei?: string;
-  ethSpentWei?: string;
-  targetGasSpentWei?: string;
-  swapGasWei?: string;
-  burnGasWei?: string;
-  residualEthWei?: string;
+  receivedSolLamports?: string;
+  solSpentLamports?: string;
+  targetFeesSpentLamports?: string;
+  swapFeeLamports?: string;
+  burnFeeLamports?: string;
+  residualSolLamports?: string;
   purchasedTokenBaseUnits?: string;
   burnedTokenBaseUnits?: string;
   residualTokenBaseUnits?: string;
@@ -191,7 +194,7 @@ interface StoredJob extends BuybackJob {
   burnRequest?: PogBurnRequest;
 }
 const chains = ['solana', 'bnb', 'robinhood'] as const;
-const sameAddress = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
+const sameAddress = (a: string, b: string) => a === b;
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
 const operationId = (id: string, stage: string) => `buyback-${stage}-${hash(id)}`;
 function units(value: string): bigint {
@@ -205,11 +208,19 @@ function positive(value: string): bigint {
   return n;
 }
 function address(value: string) {
-  if (!isAddress(value, { strict: false }) || /^0x0{40}$/i.test(value))
-    throw new Error('Pinned nonzero target address required');
+  if (!validSolanaAddress(value)) throw new Error('Pinned nonzero Solana address required');
 }
 function txHash(value: string) {
   if (!/^0x[0-9a-fA-F]{64}$/.test(value)) throw new Error('Invalid finalized transaction hash');
+}
+function signature(value: string) {
+  try {
+    const bytes = bs58.decode(value);
+    if (bytes.length === 64 && bs58.encode(bytes) === value) return;
+  } catch {
+    /* invalid base58 */
+  }
+  throw new Error('Invalid finalized Solana signature');
 }
 function identity(value: string) {
   if (typeof value !== 'string' || !/^[a-zA-Z0-9:_-]{1,256}$/.test(value))
@@ -217,10 +228,10 @@ function identity(value: string) {
 }
 function targetIdentity(target: BuybackTarget) {
   return JSON.stringify([
-    target.chainId,
-    target.tokenAddress.toLowerCase(),
-    target.devWallet.toLowerCase(),
-    target.tokenCodeHash.toLowerCase(),
+    target.chain,
+    target.mintAddress,
+    target.devWallet,
+    target.tokenProgramId,
     target.tokenDecimals,
   ]);
 }
@@ -248,16 +259,17 @@ export function createBuybackWorker(db: DatabaseSync, options: BuybackOptions) {
   const target = structuredClone(options.target),
     policy = structuredClone(options.policy);
   const now = options.now ?? Date.now;
-  address(target.tokenAddress);
+  address(target.mintAddress);
   address(target.devWallet);
-  txHash(target.tokenCodeHash);
+  address(target.tokenProgramId);
   if (
-    target.chainId !== 4663 ||
+    target.chain !== 'solana' ||
+    target.devWallet !== publicAddresses.buybackWallet ||
     !Number.isInteger(target.tokenDecimals) ||
     target.tokenDecimals < 0 ||
-    target.tokenDecimals > 36
+    target.tokenDecimals > 18
   )
-    throw new Error('Pinned Robinhood target required');
+    throw new Error('Pinned Solana mint and published buyback wallet required');
   if (
     !Number.isInteger(policy.maxSlippageBps) ||
     policy.maxSlippageBps < 0 ||
@@ -265,14 +277,14 @@ export function createBuybackWorker(db: DatabaseSync, options: BuybackOptions) {
     !Number.isSafeInteger(policy.maxQuoteAgeMs) ||
     policy.maxQuoteAgeMs < 1 ||
     policy.maxQuoteAgeMs > 300000 ||
-    !policy.allowedRouters.length
+    !policy.allowedRouterPrograms.length
   )
     throw new Error('Invalid buyback policy');
-  policy.allowedRouters.forEach(address);
-  positive(policy.maxTargetGasWei);
-  positive(policy.minimumBuyWei);
-  positive(policy.maximumBuyWei);
-  if (units(policy.maximumBuyWei) < units(policy.minimumBuyWei))
+  policy.allowedRouterPrograms.forEach(address);
+  positive(policy.maxTargetFeeLamports);
+  positive(policy.minimumBuyLamports);
+  positive(policy.maximumBuyLamports);
+  if (units(policy.maximumBuyLamports) < units(policy.minimumBuyLamports))
     throw new Error('Invalid buyback amount limits');
   const batchSize = policy.maxJobsPerRun ?? 50;
   if (!Number.isInteger(batchSize) || batchSize < 1 || batchSize > 1000)
@@ -442,9 +454,9 @@ export function createBuybackWorker(db: DatabaseSync, options: BuybackOptions) {
           const binding = await swap.verifyTarget(target);
           if (
             binding.verified !== true ||
-            binding.chainId !== 4663 ||
-            !sameAddress(binding.tokenAddress, target.tokenAddress) ||
-            binding.tokenCodeHash !== target.tokenCodeHash ||
+            binding.chain !== 'solana' ||
+            !sameAddress(binding.mintAddress, target.mintAddress) ||
+            binding.tokenProgramId !== target.tokenProgramId ||
             binding.tokenDecimals !== target.tokenDecimals ||
             !sameAddress(binding.devWallet, target.devWallet) ||
             !sameAddress(binding.signerAddress, target.devWallet) ||
@@ -479,7 +491,7 @@ export function createBuybackWorker(db: DatabaseSync, options: BuybackOptions) {
               quote.sourceChain !== job.chain ||
               quote.sourceAsset !== job.asset ||
               quote.sourceAmountBaseUnits !== job.amountBaseUnits ||
-              quote.destinationChainId !== 4663 ||
+              quote.destinationChain !== 'solana' ||
               !sameAddress(quote.recipient, target.devWallet)
             )
               throw new Error('Transfer quote identity mismatch');
@@ -488,7 +500,7 @@ export function createBuybackWorker(db: DatabaseSync, options: BuybackOptions) {
               lot,
               target,
               quote,
-              minimumEthOutWei: minimum(quote.expectedEthWei),
+              minimumSolOutLamports: minimum(quote.expectedSolLamports),
               maxSourceGasBaseUnits: policy.maxSourceGasBaseUnits[job.chain]!,
             };
             if (!commit({ ...job, phase: 'transferring', transferRequest: request })) break;
@@ -509,78 +521,84 @@ export function createBuybackWorker(db: DatabaseSync, options: BuybackOptions) {
               proof.sourceAsset !== job.asset ||
               proof.sourceClaimReference !== job.claimReference ||
               proof.sourceAmountBaseUnits !== job.amountBaseUnits ||
-              proof.destinationChainId !== 4663 ||
+              proof.destinationChain !== 'solana' ||
               !sameAddress(proof.recipient, target.devWallet)
             )
               throw new Error('Finalized transfer identity mismatch');
             const debit = positive(proof.sourceDebitBaseUnits),
               gas = units(proof.sourceGasBaseUnits),
-              received = positive(proof.ethAmountWei);
+              received = positive(proof.solAmountLamports);
             if (
               debit > units(job.amountBaseUnits) ||
               gas > debit ||
               gas > units(request.maxSourceGasBaseUnits) ||
-              received < units(request.minimumEthOutWei)
+              received < units(request.minimumSolOutLamports)
             )
               throw new Error('Finalized transfer exceeds policy');
-            identity(proof.sourceTransactionHash);
-            if (job.chain !== 'solana') txHash(proof.sourceTransactionHash);
-            txHash(proof.destinationTransactionHash);
+            identity(proof.sourceTransactionId);
+            if (job.chain === 'solana') signature(proof.sourceTransactionId);
+            else txHash(proof.sourceTransactionId);
+            signature(proof.destinationSignature);
             identity(proof.evidenceId);
-            const sourceHash =
+            const sourceReference =
               job.chain === 'solana'
-                ? proof.sourceTransactionHash
-                : proof.sourceTransactionHash.toLowerCase();
-            const destinationHash = proof.destinationTransactionHash.toLowerCase();
+                ? proof.sourceTransactionId
+                : proof.sourceTransactionId.toLowerCase();
+            const destinationReference = proof.destinationSignature;
             commit(
               {
                 ...job,
                 phase: 'funded',
                 sourceSpentBaseUnits: debit.toString(),
                 residualSourceBaseUnits: (units(job.amountBaseUnits) - debit).toString(),
-                receivedEthWei: received.toString(),
-                residualEthWei: received.toString(),
-                sourceTransferReference: sourceHash,
-                transferReference: destinationHash,
+                receivedSolLamports: received.toString(),
+                residualSolLamports: received.toString(),
+                sourceTransferReference: sourceReference,
+                transferReference: destinationReference,
               },
               'transfer',
               [
                 `transfer:evidence:${proof.evidenceId}`,
-                `transaction:${job.chain === 'solana' ? 'solana' : job.chain === 'bnb' ? '56' : '4663'}:${sourceHash}`,
-                `transaction:4663:${destinationHash}`,
+                `transaction:${job.chain === 'solana' ? 'solana' : job.chain === 'bnb' ? '56' : '4663'}:${sourceReference}`,
+                `transaction:solana:${destinationReference}`,
               ],
             );
             break;
           }
           case 'funded': {
-            const received = positive(job.receivedEthWei!),
-              reserve = 2n * units(policy.maxTargetGasWei);
+            const received = positive(job.receivedSolLamports!),
+              reserve = 2n * units(policy.maxTargetFeeLamports);
             const input = received - reserve;
-            if (input < units(policy.minimumBuyWei) || input > units(policy.maximumBuyWei))
-              throw new Error('Realized ETH cannot satisfy buy and gas limits');
+            if (
+              input < units(policy.minimumBuyLamports) ||
+              input > units(policy.maximumBuyLamports)
+            )
+              throw new Error('Realized SOL cannot satisfy buy and fee limits');
             const id = operationId(job.id, 'buy');
             const quote = await swap.quote({
               operationId: id,
               target,
-              inputEthWei: input.toString(),
+              inputSolLamports: input.toString(),
               maxSlippageBps: policy.maxSlippageBps,
             });
             fresh(quote);
             if (
-              quote.chainId !== 4663 ||
-              !sameAddress(quote.tokenAddress, target.tokenAddress) ||
+              quote.chain !== 'solana' ||
+              !sameAddress(quote.mintAddress, target.mintAddress) ||
               !sameAddress(quote.recipient, target.devWallet) ||
-              quote.inputEthWei !== input.toString() ||
-              !policy.allowedRouters.some((router) => sameAddress(router, quote.routerAddress))
+              quote.inputSolLamports !== input.toString() ||
+              !policy.allowedRouterPrograms.some((router) =>
+                sameAddress(router, quote.routerProgramId),
+              )
             )
               throw new Error('Swap quote identity mismatch');
             const request: PogSwapRequest = {
               operationId: id,
               target,
-              inputEthWei: input.toString(),
+              inputSolLamports: input.toString(),
               quote,
               minimumTokenBaseUnits: minimum(quote.expectedTokenBaseUnits),
-              maxGasWei: policy.maxTargetGasWei,
+              maxFeeLamports: policy.maxTargetFeeLamports,
             };
             if (!commit({ ...job, phase: 'buying', swapRequest: request })) break;
             const result = await swap.submit(request);
@@ -596,56 +614,54 @@ export function createBuybackWorker(db: DatabaseSync, options: BuybackOptions) {
             if (
               proof.finalized !== true ||
               proof.operationId !== request.operationId ||
-              proof.chainId !== 4663 ||
-              !sameAddress(proof.tokenAddress, target.tokenAddress) ||
-              proof.tokenCodeHash !== target.tokenCodeHash ||
+              proof.chain !== 'solana' ||
+              !sameAddress(proof.mintAddress, target.mintAddress) ||
+              proof.tokenProgramId !== target.tokenProgramId ||
               proof.tokenDecimals !== target.tokenDecimals ||
               !sameAddress(proof.from, target.devWallet) ||
               !sameAddress(proof.recipient, target.devWallet) ||
-              !sameAddress(proof.routerAddress, request.quote.routerAddress)
+              !sameAddress(proof.routerProgramId, request.quote.routerProgramId)
             )
               throw new Error('Finalized swap identity mismatch');
-            const spent = positive(proof.ethSpentWei),
-              gas = units(proof.gasWei),
+            const spent = positive(proof.solSpentLamports),
+              gas = units(proof.feeLamports),
               tokens = positive(proof.tokenAmountBaseUnits);
             if (
-              spent > units(request.inputEthWei) ||
-              gas > units(request.maxGasWei) ||
+              spent > units(request.inputSolLamports) ||
+              gas > units(request.maxFeeLamports) ||
               tokens < units(request.minimumTokenBaseUnits) ||
-              spent + gas > units(job.receivedEthWei!)
+              spent + gas > units(job.receivedSolLamports!)
             )
               throw new Error('Finalized swap exceeds policy');
-            txHash(proof.transactionHash);
+            signature(proof.signature);
             identity(proof.evidenceId);
             commit(
               {
                 ...job,
                 phase: 'bought',
-                ethSpentWei: spent.toString(),
-                targetGasSpentWei: gas.toString(),
-                swapGasWei: gas.toString(),
-                residualEthWei: (units(job.receivedEthWei!) - spent - gas).toString(),
+                solSpentLamports: spent.toString(),
+                targetFeesSpentLamports: gas.toString(),
+                swapFeeLamports: gas.toString(),
+                residualSolLamports: (units(job.receivedSolLamports!) - spent - gas).toString(),
                 purchasedTokenBaseUnits: tokens.toString(),
                 residualTokenBaseUnits: tokens.toString(),
-                buyReference: proof.transactionHash.toLowerCase(),
+                buyReference: proof.signature,
                 targetVerifiedAt: new Date(now()).toISOString(),
               },
               'buy',
-              [
-                `buy:evidence:${proof.evidenceId}`,
-                `transaction:4663:${proof.transactionHash.toLowerCase()}`,
-              ],
+              [`buy:evidence:${proof.evidenceId}`, `transaction:solana:${proof.signature}`],
             );
             break;
           }
           case 'bought': {
-            if (units(job.residualEthWei!) < units(policy.maxTargetGasWei))
-              throw new Error('Insufficient branch residual for bounded burn gas');
+            if (units(job.residualSolLamports!) < units(policy.maxTargetFeeLamports))
+              throw new Error('Insufficient branch residual for bounded burn fee');
             const request: PogBurnRequest = {
               operationId: operationId(job.id, 'burn'),
               target,
+              instruction: 'BurnChecked',
               tokenAmountBaseUnits: job.purchasedTokenBaseUnits!,
-              maxGasWei: policy.maxTargetGasWei,
+              maxFeeLamports: policy.maxTargetFeeLamports,
             };
             if (!commit({ ...job, phase: 'burning', burnRequest: request })) break;
             const result = await burn.submit(request);
@@ -661,41 +677,39 @@ export function createBuybackWorker(db: DatabaseSync, options: BuybackOptions) {
             if (
               proof.finalized !== true ||
               proof.operationId !== request.operationId ||
-              proof.chainId !== 4663 ||
-              !sameAddress(proof.tokenAddress, target.tokenAddress) ||
-              proof.tokenCodeHash !== target.tokenCodeHash ||
+              proof.chain !== 'solana' ||
+              !sameAddress(proof.mintAddress, target.mintAddress) ||
+              proof.tokenProgramId !== target.tokenProgramId ||
+              proof.instruction !== 'BurnChecked' ||
               !sameAddress(proof.from, target.devWallet) ||
               proof.amountBaseUnits !== request.tokenAmountBaseUnits
             )
               throw new Error('Finalized burn identity mismatch');
             const burned = positive(proof.amountBaseUnits),
-              gas = units(proof.gasWei);
+              gas = units(proof.feeLamports);
             if (
               units(proof.totalSupplyBefore) - units(proof.totalSupplyAfter) !== burned ||
               units(proof.walletBalanceBefore) - units(proof.walletBalanceAfter) !== burned ||
-              gas > units(request.maxGasWei) ||
-              gas > units(job.residualEthWei!)
+              gas > units(request.maxFeeLamports) ||
+              gas > units(job.residualSolLamports!)
             )
               throw new Error('Actual supply-reduction proof required');
-            txHash(proof.transactionHash);
+            signature(proof.signature);
             identity(proof.evidenceId);
             commit(
               {
                 ...job,
                 phase: 'completed',
-                targetGasSpentWei: (units(job.targetGasSpentWei!) + gas).toString(),
-                burnGasWei: gas.toString(),
+                targetFeesSpentLamports: (units(job.targetFeesSpentLamports!) + gas).toString(),
+                burnFeeLamports: gas.toString(),
                 burnedTokenBaseUnits: burned.toString(),
                 residualTokenBaseUnits: (units(job.purchasedTokenBaseUnits!) - burned).toString(),
-                residualEthWei: (units(job.residualEthWei!) - gas).toString(),
-                burnReference: proof.transactionHash.toLowerCase(),
+                residualSolLamports: (units(job.residualSolLamports!) - gas).toString(),
+                burnReference: proof.signature,
                 completedAt: new Date(now()).toISOString(),
               },
               'burn',
-              [
-                `burn:evidence:${proof.evidenceId}`,
-                `transaction:4663:${proof.transactionHash.toLowerCase()}`,
-              ],
+              [`burn:evidence:${proof.evidenceId}`, `transaction:solana:${proof.signature}`],
             );
             break;
           }

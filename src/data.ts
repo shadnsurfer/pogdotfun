@@ -1,6 +1,8 @@
 import { useSyncExternalStore } from 'react';
 import bs58 from 'bs58';
 import { retryAfterSeconds } from '../server/retry-after';
+import { validSolanaAddress } from '../server/treasury/platform-identity';
+import { publicAddresses } from '../server/treasury/public-addresses';
 import type {
   PublicNativeBuybackLedger,
   PublicPlatformToken,
@@ -227,22 +229,16 @@ function verifiedPlatform(value: unknown): PlatformToken | null {
     value.id !== 'platform-pog' ||
     value.name !== 'Pog' ||
     value.symbol !== 'POG' ||
-    value.chain !== 'robinhood' ||
-    value.chainId !== 4663 ||
-    typeof value.address !== 'string' ||
-    !/^0x[0-9a-fA-F]{40}$/.test(value.address) ||
-    /^0x0{40}$/.test(value.address) ||
-    typeof value.devWallet !== 'string' ||
-    !/^0x[0-9a-fA-F]{40}$/.test(value.devWallet) ||
-    /^0x0{40}$/.test(value.devWallet) ||
-    typeof value.tokenCodeHash !== 'string' ||
-    !/^0x[0-9a-fA-F]{64}$/.test(value.tokenCodeHash) ||
-    /^0x0{64}$/.test(value.tokenCodeHash) ||
+    value.chain !== 'solana' ||
+    !validSolanaAddress(value.address) ||
+    !validSolanaAddress(value.devWallet) ||
+    value.devWallet !== publicAddresses.buybackWallet ||
+    !validSolanaAddress(value.tokenProgramId) ||
     metric(value.tokenDecimals) === null ||
-    Number(value.tokenDecimals) > 36 ||
+    Number(value.tokenDecimals) > 18 ||
     !timestamp(value.verifiedAt) ||
-    !exactUnits(value.ethSpentWei) ||
-    !exactUnits(value.targetGasSpentWei) ||
+    !exactUnits(value.solSpentLamports) ||
+    !exactUnits(value.targetFeesSpentLamports) ||
     !exactUnits(value.burnedTokenBaseUnits) ||
     metric(value.buybackCount) === null ||
     metric(value.burnCount) === null ||
@@ -253,15 +249,14 @@ function verifiedPlatform(value: unknown): PlatformToken | null {
     id: 'platform-pog',
     name: 'Pog',
     symbol: 'POG',
-    chain: 'robinhood',
-    chainId: 4663,
-    address: value.address as `0x${string}`,
-    devWallet: value.devWallet as `0x${string}`,
-    tokenCodeHash: value.tokenCodeHash as `0x${string}`,
+    chain: 'solana',
+    address: value.address,
+    devWallet: value.devWallet,
+    tokenProgramId: value.tokenProgramId,
     tokenDecimals: value.tokenDecimals as number,
     verifiedAt: value.verifiedAt,
-    ethSpentWei: value.ethSpentWei,
-    targetGasSpentWei: value.targetGasSpentWei,
+    solSpentLamports: value.solSpentLamports,
+    targetFeesSpentLamports: value.targetFeesSpentLamports,
     burnedTokenBaseUnits: value.burnedTokenBaseUnits,
     buybackCount: value.buybackCount as number,
     burnCount: value.burnCount as number,
@@ -271,10 +266,10 @@ function verifiedPlatform(value: unknown): PlatformToken | null {
 function verifiedNativeLedger(value: unknown): PublicNativeBuybackLedger | null {
   if (value === undefined || value === null) return null;
   const keys = [
-    'receivedEthWei',
-    'ethSpentWei',
-    'targetGasSpentWei',
-    'residualEthWei',
+    'receivedSolLamports',
+    'solSpentLamports',
+    'targetFeesSpentLamports',
+    'residualSolLamports',
     'purchasedTokenBaseUnits',
     'burnedTokenBaseUnits',
     'residualTokenBaseUnits',
@@ -349,7 +344,7 @@ function verifiedNativeLedger(value: unknown): PublicNativeBuybackLedger | null 
       !['reserved', 'transferring', 'funded', 'buying', 'bought', 'burning', 'completed'].includes(
         String(item.phase),
       ) ||
-      ['receivedEthWei', 'ethSpentWei', 'burnedTokenBaseUnits'].some(
+      ['receivedSolLamports', 'solSpentLamports', 'burnedTokenBaseUnits'].some(
         (key) => item[key] !== null && !exactUnits(item[key]),
       ) ||
       ['sourceTransferReference', 'transferReference', 'buyReference', 'burnReference'].some(
@@ -364,8 +359,8 @@ function verifiedNativeLedger(value: unknown): PublicNativeBuybackLedger | null 
       sourceAsset: item.sourceAsset,
       sourceAmountBaseUnits: item.sourceAmountBaseUnits,
       phase: item.phase,
-      receivedEthWei: item.receivedEthWei,
-      ethSpentWei: item.ethSpentWei,
+      receivedSolLamports: item.receivedSolLamports,
+      solSpentLamports: item.solSpentLamports,
       burnedTokenBaseUnits: item.burnedTokenBaseUnits,
       sourceTransferReference: item.sourceTransferReference,
       transferReference: item.transferReference,
@@ -384,10 +379,10 @@ function verifiedNativeLedger(value: unknown): PublicNativeBuybackLedger | null 
   } as PublicNativeBuybackLedger;
   for (const key of keys) result[key] = value[key] as string;
   if (
-    BigInt(result.receivedEthWei) !==
-      BigInt(result.ethSpentWei) +
-        BigInt(result.targetGasSpentWei) +
-        BigInt(result.residualEthWei) ||
+    BigInt(result.receivedSolLamports) !==
+      BigInt(result.solSpentLamports) +
+        BigInt(result.targetFeesSpentLamports) +
+        BigInt(result.residualSolLamports) ||
     BigInt(result.purchasedTokenBaseUnits) !==
       BigInt(result.burnedTokenBaseUnits) + BigInt(result.residualTokenBaseUnits)
   )

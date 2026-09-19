@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { DatabaseSync } from 'node:sqlite';
+import bs58 from 'bs58';
 import { createServices } from '../server/services.ts';
+import { publicAddresses } from '../server/treasury/public-addresses.ts';
 import { createOperations } from '../server/operations.ts';
 import { autonomousRuntime } from '../server/agents/runtime.ts';
 import type { FeeLot, PipelineAdapters } from '../server/agents/pipeline.ts';
@@ -221,31 +223,32 @@ function deferred<T>() {
   return { promise, resolve, reject };
 }
 function buybackFixture() {
-  const wallet = `0x${'11'.repeat(20)}` as const,
-    token = `0x${'22'.repeat(20)}` as const,
-    router = `0x${'33'.repeat(20)}` as const,
-    codeHash = `0x${'44'.repeat(32)}` as const;
+  const wallet = publicAddresses.buybackWallet,
+    token = bs58.encode(new Uint8Array(32).fill(22)),
+    router = bs58.encode(new Uint8Array(32).fill(33)),
+    tokenProgram = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
   const transferTx = `0x${'55'.repeat(32)}` as const,
-    buyTx = `0x${'66'.repeat(32)}` as const,
-    burnTx = `0x${'77'.repeat(32)}` as const;
+    destinationTx = bs58.encode(new Uint8Array(64).fill(55)),
+    buyTx = bs58.encode(new Uint8Array(64).fill(66)),
+    burnTx = bs58.encode(new Uint8Array(64).fill(77));
   const count = { transfer: 0, buy: 0, burn: 0 };
   const binding: NonNullable<import('../server/services.ts').ServiceOptions['buyback']> = {
     target: {
-      chainId: 4663,
-      tokenAddress: token,
+      chain: 'solana',
+      mintAddress: token,
       devWallet: wallet,
-      tokenCodeHash: codeHash,
-      tokenDecimals: 18,
+      tokenProgramId: tokenProgram,
+      tokenDecimals: 9,
     },
     policy: {
       maxSlippageBps: 100,
       maxQuoteAgeMs: 30000,
-      maxTargetGasWei: '10',
-      minimumBuyWei: '10',
-      maximumBuyWei: '1000',
+      maxTargetFeeLamports: '10',
+      minimumBuyLamports: '10',
+      maximumBuyLamports: '1000',
       maxSourceAmountBaseUnits: { bnb: '1000' },
       maxSourceGasBaseUnits: { bnb: '1' },
-      allowedRouters: [router],
+      allowedRouterPrograms: [router],
     },
     transfers: {
       bnb: {
@@ -257,9 +260,9 @@ function buybackFixture() {
             sourceChain: r.lot.chain,
             sourceAsset: r.lot.asset,
             sourceAmountBaseUnits: r.lot.amountBaseUnits,
-            destinationChainId: 4663,
+            destinationChain: 'solana',
             recipient: wallet,
-            expectedEthWei: '1000',
+            expectedSolLamports: '1000',
           };
         },
         async submit() {
@@ -276,11 +279,11 @@ function buybackFixture() {
             sourceAmountBaseUnits: r.lot.amountBaseUnits,
             sourceDebitBaseUnits: r.lot.amountBaseUnits,
             sourceGasBaseUnits: '1',
-            sourceTransactionHash: transferTx,
-            destinationChainId: 4663,
+            sourceTransactionId: transferTx,
+            destinationChain: 'solana',
             recipient: wallet,
-            ethAmountWei: '1000',
-            destinationTransactionHash: transferTx,
+            solAmountLamports: '1000',
+            destinationSignature: destinationTx,
             evidenceId: 'transfer-evidence',
           };
         },
@@ -295,11 +298,11 @@ function buybackFixture() {
           id: 'buy-quote',
           quotedAt: Date.now(),
           expiresAt: Date.now() + 20000,
-          chainId: 4663,
-          tokenAddress: token,
+          chain: 'solana',
+          mintAddress: token,
           recipient: wallet,
-          routerAddress: router,
-          inputEthWei: r.inputEthWei,
+          routerProgramId: router,
+          inputSolLamports: r.inputSolLamports,
           expectedTokenBaseUnits: '500',
         };
       },
@@ -311,17 +314,17 @@ function buybackFixture() {
         return {
           operationId: r.operationId,
           finalized: true,
-          chainId: 4663,
-          tokenAddress: token,
-          tokenCodeHash: codeHash,
-          tokenDecimals: 18,
+          chain: 'solana',
+          mintAddress: token,
+          tokenProgramId: tokenProgram,
+          tokenDecimals: 9,
           from: wallet,
           recipient: wallet,
-          routerAddress: router,
-          ethSpentWei: r.inputEthWei,
-          gasWei: '5',
+          routerProgramId: router,
+          solSpentLamports: r.inputSolLamports,
+          feeLamports: '5',
           tokenAmountBaseUnits: '500',
-          transactionHash: buyTx,
+          signature: buyTx,
           evidenceId: 'buy-evidence',
         };
       },
@@ -335,17 +338,18 @@ function buybackFixture() {
         return {
           operationId: r.operationId,
           finalized: true,
-          chainId: 4663,
-          tokenAddress: token,
-          tokenCodeHash: codeHash,
+          chain: 'solana',
+          mintAddress: token,
+          tokenProgramId: tokenProgram,
+          instruction: 'BurnChecked',
           from: wallet,
           amountBaseUnits: r.tokenAmountBaseUnits,
           totalSupplyBefore: '10000',
           totalSupplyAfter: '9500',
           walletBalanceBefore: '500',
           walletBalanceAfter: '0',
-          gasWei: '5',
-          transactionHash: burnTx,
+          feeLamports: '5',
+          signature: burnTx,
           evidenceId: 'burn-evidence',
         };
       },

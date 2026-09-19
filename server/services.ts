@@ -34,7 +34,7 @@ export interface ServiceOptions {
   /** Bounds observation only; never cancels or unlocks an in-flight financial operation. */
   workerObservationMs?: number;
   integrations?: WorkerIntegrations;
-  /** Trusted Robinhood treasury bindings; spending authority still comes from both runtime flags. */
+  /** Trusted Solana treasury bindings; spending authority still comes from both runtime flags. */
   buyback?: Omit<BuybackOptions, 'enabled'>;
   launchSigner?: (creator: string) => Promise<Keypair>;
   liveGate?: Pick<StreamerLiveGate, 'watch' | 'requireLive' | 'assertFreshLive'>;
@@ -352,7 +352,7 @@ export function createServices(
       enabled,
       settlementConfigured: Boolean(composed),
       buybackConfigured: Boolean(buyback),
-      platformToken: { symbol: 'POG', chain: 'robinhood', chainId: 4663 },
+      platformToken: { symbol: 'POG', chain: 'solana' },
       allocation: { unit: 'native', streamerPercent: 80, buybackPercent: 20, beforeUsdSale: true },
       fundingProvider: 'coinbase',
       card: 'Coinbase One',

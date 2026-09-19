@@ -250,33 +250,33 @@ test('confirmed autonomous gifts display their real chain and receipt without fa
   assert.ok(html.indexOf('receipt-two') < html.indexOf('receipt-one'));
 });
 
-test('official POG shows exact Robinhood native amounts without Solana identity or invented USD prices', async () => {
+test('official POG shows exact Solana native amounts without invented USD prices', async () => {
   const { PlatformTreasury } = await vite.ssrLoadModule('/src/PlatformTreasury.tsx');
   const token = {
     id: 'platform-pog',
     name: 'Pog',
     symbol: 'POG',
-    chain: 'robinhood',
-    chainId: 4663,
-    address: `0x${'1'.repeat(40)}`,
-    devWallet: `0x${'2'.repeat(40)}`,
-    tokenCodeHash: `0x${'3'.repeat(64)}`,
-    tokenDecimals: 36,
+    chain: 'solana',
+    address: 'So11111111111111111111111111111111111111112',
+    devWallet: '5c8eKW6Xw4magTChnPUMRN6xctGgeSDrMXrwzmtL8N3S',
+    tokenProgramId: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
+    tokenDecimals: 9,
     verifiedAt: '2026-09-18T12:00:00Z',
-    ethSpentWei: '1234567890123456789',
-    targetGasSpentWei: '1000000000000000',
-    burnedTokenBaseUnits: '1000000000000000000000000000000000001',
+    solSpentLamports: '1234567890',
+    targetFeesSpentLamports: '1000000',
+    burnedTokenBaseUnits: '1000000001',
     buybackCount: 1,
     burnCount: 1,
     lastExecutionAt: null,
   };
   const html = renderToStaticMarkup(createElement(PlatformTreasury, { token }));
-  assert.match(html, /Robinhood Chain · 4663/);
-  assert.match(html, /1.234567890123456789 ETH/);
-  assert.match(html, /1.000000000000000000000000000000000001/);
-  assert.match(html, /Dev wallet/);
-  assert.doesNotMatch(html, /solscan|Verified on Solana|Market cap|TokenPriceChart/);
+  assert.match(html, /Solana/);
+  assert.match(html, /1.23456789 SOL/);
+  assert.match(html, /1.000000001/);
+  assert.match(html, /Buyback and burn wallet/);
+  assert.match(html, /solscan/);
+  assert.doesNotMatch(html, /Market cap|TokenPriceChart/);
   const unconfigured = renderToStaticMarkup(createElement(PlatformTreasury, { token: null }));
-  assert.match(unconfigured, /target has not been verified/);
-  assert.doesNotMatch(unconfigured, /0x[0-9a-f]{40}/);
+  assert.match(unconfigured, /mint has not been verified/);
+  assert.doesNotMatch(unconfigured, /Verified mint/);
 });

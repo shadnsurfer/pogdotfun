@@ -1,17 +1,19 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { DatabaseSync } from 'node:sqlite';
+import bs58 from 'bs58';
 import { createOperations } from '../server/operations.ts';
 import { publicCatalog } from '../server/public/catalog.ts';
 import { projectNativeBuybacks } from '../server/public/native-buybacks.ts';
 import type { BuybackJob, BuybackTarget } from '../server/agents/buyback.ts';
 import type { NativeFeeSplit } from '../server/agents/fee-router.ts';
+import { publicAddresses } from '../server/treasury/public-addresses.ts';
 
 const target: BuybackTarget = {
-  chainId: 4663,
-  tokenAddress: `0x${'1'.repeat(40)}`,
-  devWallet: `0x${'2'.repeat(40)}`,
-  tokenCodeHash: `0x${'3'.repeat(64)}`,
+  chain: 'solana',
+  mintAddress: bs58.encode(new Uint8Array(32).fill(11)),
+  devWallet: publicAddresses.buybackWallet,
+  tokenProgramId: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
   tokenDecimals: 18,
 };
 const time = '2026-09-18T12:00:00Z';
@@ -43,12 +45,12 @@ function fixture() {
     targetVerifiedAt: time,
     sourceSpentBaseUnits: '1900000000000000000',
     residualSourceBaseUnits: '100000000000000000',
-    receivedEthWei: '500000000000000000',
-    ethSpentWei: '490000000000000000',
-    targetGasSpentWei: '1000000000000000',
-    swapGasWei: '500000000000000',
-    burnGasWei: '500000000000000',
-    residualEthWei: '9000000000000000',
+    receivedSolLamports: '500000000000000000',
+    solSpentLamports: '490000000000000000',
+    targetFeesSpentLamports: '1000000000000000',
+    swapFeeLamports: '500000000000000',
+    burnFeeLamports: '500000000000000',
+    residualSolLamports: '9000000000000000',
     purchasedTokenBaseUnits: '12345678901234567890123',
     burnedTokenBaseUnits: '12345678901234567890123',
     residualTokenBaseUnits: '0',
@@ -98,7 +100,7 @@ test('configured target and bridge funds are not verified token identity or comp
     });
     assert.equal(result.platformToken, null);
     assert.equal(result.officialPlatformIntent.status, 'configured');
-    assert.equal(result.nativeBuybackLedger.ethSpentWei, '0');
+    assert.equal(result.nativeBuybackLedger.solSpentLamports, '0');
     assert.equal(result.nativeBuybackLedger.burnedTokenBaseUnits, '0');
     assert.equal(result.nativeBuybackLedger.sources[0].pendingBuybackBaseUnits, '0');
     assert.equal(
@@ -117,13 +119,12 @@ test('verified native ledgers preserve exact per-asset amounts and expose only c
       jobs: [{ ...job, privateSigningKey: 'PRIVATE' } as BuybackJob],
       splits: [split],
     });
-    assert.equal(result.platformToken?.chain, 'robinhood');
-    assert.equal(result.platformToken?.chainId, 4663);
-    assert.equal(result.platformToken?.address, target.tokenAddress);
+    assert.equal(result.platformToken?.chain, 'solana');
+    assert.equal(result.platformToken?.address, target.mintAddress);
     assert.equal(result.nativeBuybackLedger.sources[0].claimedBaseUnits, '10000000000000000003');
     assert.equal(result.nativeBuybackLedger.sources[0].streamerBaseUnits, '8000000000000000003');
     assert.equal(result.nativeBuybackLedger.sources[0].pendingBuybackBaseUnits, '0');
-    assert.equal(result.nativeBuybackLedger.ethSpentWei, job.ethSpentWei);
+    assert.equal(result.nativeBuybackLedger.solSpentLamports, job.solSpentLamports);
     assert.equal(result.nativeBuybackLedger.burnedTokenBaseUnits, job.burnedTokenBaseUnits);
     assert.equal(result.nativeBuybackLedger.receipts[0].burnReference, 'burn-proof');
     assert.doesNotMatch(JSON.stringify(result.nativeBuybackLedger), /PRIVATE|UsdCents|solscan/);
@@ -144,7 +145,7 @@ test('unbound, duplicate, inconsistent, or wrong-chain buyback evidence cannot i
         jobs: [{ ...job, burnedTokenBaseUnits: '99999999999999999999999' }],
         splits: [split],
       },
-      { target: { ...target, chainId: 1 }, jobs: [job], splits: [split] },
+      { target: { ...target, chain: 'robinhood' }, jobs: [job], splits: [split] },
       {
         target,
         jobs: [job],
@@ -162,7 +163,7 @@ test('removing runtime target configuration does not hide confirmed historical n
   try {
     const result = projectNativeBuybacks(catalog, { jobs: [job], splits: [split] });
     assert.equal(result.officialPlatformIntent.status, 'unconfigured');
-    assert.equal(result.platformToken?.address, target.tokenAddress);
+    assert.equal(result.platformToken?.address, target.mintAddress);
     assert.equal(result.nativeBuybackLedger.sources[0].sourceSpentBaseUnits, '1900000000000000000');
   } finally {
     db.close();

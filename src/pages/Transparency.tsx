@@ -659,8 +659,8 @@ export function FlowPage() {
       </ol>
       <p>
         Before conversion, native creator fees split 80% to streamer support and 20% to POG buybacks
-        and burns on Robinhood Chain. All actual net USD proceeds from the streamer share fund
-        gifts. A pending transfer or checkout never counts as a donation.
+        and burns on Solana. All actual net USD proceeds from the streamer share fund gifts. A
+        pending transfer or checkout never counts as a donation.
       </p>
     </div>
   );
