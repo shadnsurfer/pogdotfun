@@ -223,7 +223,7 @@ function deferred<T>() {
   return { promise, resolve, reject };
 }
 function buybackFixture() {
-  const wallet = publicAddresses.buybackWallet,
+  const wallet = publicAddresses.devWallet,
     token = bs58.encode(new Uint8Array(32).fill(22)),
     router = bs58.encode(new Uint8Array(32).fill(33)),
     tokenProgram = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';

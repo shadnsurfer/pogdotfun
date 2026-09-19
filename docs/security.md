@@ -12,11 +12,11 @@ Provision secrets before service startup using private provisioning code and `Se
 
 This repository's role readers are application capabilities within a trusted process, not a hardware security boundary. A host administrator with code/process access can defeat software-only isolation. Use separate workload identities, private networking, KMS/HSM signing, disk encryption and access-controlled backups where those guarantees are required. SQLite accounting data itself is not encrypted by this implementation; encrypted credentials are. Browserbase contexts and saved checkout payment instruments are secured by that provider, not by local database encryption.
 
-The trusted worker module receives `secrets.forRole(role)`, a read-only credential capability with no provisioning or key-export method. Bind the official $POG buyback-wallet key only to `treasury`, then pass that reader to the verified Solana signer. Provider adapters must not expose the signer to HTTP or browser workers.
+The trusted worker module receives `secrets.forRole(role)`, a read-only credential capability with no provisioning or key-export method. Bind the official $POG dev-wallet key only to `treasury`, then pass that reader to the verified Solana signer. Provider adapters must not expose the signer to HTTP or browser workers.
 
 ## Financial invariants
 
-- Immutable native 80/20 splits precede transfers and USD sales. Only the streamer child can fund checkout; the buyback child can fund only the pinned Solana $POG buyback and burn wallet.
+- Immutable native 80/20 splits precede transfers and USD sales. Only the streamer child can fund checkout; the buyback child can fund only the pinned Solana $POG dev wallet, which performs both buybacks and burns.
 - Buyback, swap and burn references are unique; a completed buy is not a completed supply burn. Unknown side effects remain reserved.
 - Native quantities and decimal conversions remain exact; invalid/stale quotes fail closed.
 - Durable claim, deposit, conversion, card charge and receipt identities prevent repeated credit.

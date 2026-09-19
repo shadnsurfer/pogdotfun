@@ -9,7 +9,7 @@ const platform = () => ({
   symbol: 'POG',
   chain: 'solana',
   address: bs58.encode(new Uint8Array(32).fill(11)),
-  devWallet: publicAddresses.buybackWallet,
+  devWallet: publicAddresses.devWallet,
   tokenProgramId: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
   tokenDecimals: 9,
   verifiedAt: '2026-09-18T12:00:00Z',

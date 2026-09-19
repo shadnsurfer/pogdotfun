@@ -232,7 +232,7 @@ function verifiedPlatform(value: unknown): PlatformToken | null {
     value.chain !== 'solana' ||
     !validSolanaAddress(value.address) ||
     !validSolanaAddress(value.devWallet) ||
-    value.devWallet !== publicAddresses.buybackWallet ||
+    value.devWallet !== publicAddresses.devWallet ||
     !validSolanaAddress(value.tokenProgramId) ||
     metric(value.tokenDecimals) === null ||
     Number(value.tokenDecimals) > 18 ||

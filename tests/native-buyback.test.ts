@@ -11,7 +11,7 @@ import type {
   PogBurnRequest,
 } from '../server/agents/buyback.ts';
 import type { FeeLot } from '../server/agents/pipeline.ts';
-const wallet = publicAddresses.buybackWallet;
+const wallet = publicAddresses.devWallet;
 const token = bs58.encode(new Uint8Array(32).fill(22));
 const router = bs58.encode(new Uint8Array(32).fill(33));
 const tokenProgram = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
@@ -208,6 +208,10 @@ test('native 20% lot is routed into SOL, purchased and supply burned with residu
   assert.equal(job.targetFeesSpentLamports, '10');
   assert.equal(job.residualTokenBaseUnits, '0');
   assert.equal(f.requests.swapRequest?.minimumTokenBaseUnits, '495');
+  assert.equal(
+    f.requests.transferRequest?.target.devWallet,
+    'AHshYUULwYdZjYTkrNmgqRUXCfnzdKZZZNgByJqxJGjY',
+  );
   f.db.close();
 });
 test('timeout restarts reconcile the same transfer identity without submitting twice', async () => {
@@ -411,9 +415,12 @@ test('the official POG target is durably pinned across worker restarts', () => {
     () =>
       createBuybackWorker(f.db, {
         ...f.options,
-        target: { ...f.options.target, devWallet: router },
+        target: {
+          ...f.options.target,
+          devWallet: '5c8eKW6Xw4magTChnPUMRN6xctGgeSDrMXrwzmtL8N3S',
+        },
       }),
-    /target.*binding|official.*target|published buyback wallet/i,
+    /target.*binding|official.*target|published dev wallet/i,
   );
   assert.deepEqual(f.counts, [0, 0, 0]);
   f.db.close();

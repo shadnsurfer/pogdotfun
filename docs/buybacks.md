@@ -2,11 +2,11 @@
 
 `server/agents/buyback.ts` is the durable buyback coordinator. It accepts the native **20% child fee lot** already produced by the native allocation router. It does not split that lot again, touch the 80% streamer branch, value native balances in USD, or treat a quote as money received.
 
-The intended path is SOL, BNB, or Robinhood ETH → verified SOL on **Solana** → the published agent-controlled [buyback and burn wallet](https://solscan.io/account/5c8eKW6Xw4magTChnPUMRN6xctGgeSDrMXrwzmtL8N3S) → purchase of the pinned official $POG mint → an actual reduction of mint supply through SPL `BurnChecked`.
+The intended path is SOL, BNB, or Robinhood ETH → verified SOL on **Solana** → the published agent-controlled [$POG dev wallet](https://solscan.io/account/AHshYUULwYdZjYTkrNmgqRUXCfnzdKZZZNgByJqxJGjY) → purchase of the pinned official $POG mint → an actual reduction of mint supply through SPL `BurnChecked` executed from that wallet's token account.
 
 ## Configuration and bindings
 
-The repository supplies the coordinator, validation, journal, and deterministic tests. The published buyback wallet is pinned, but no $POG mint address, signing key, live bridge, DEX route, funded account, or deployed transaction implementation is supplied. A deployment must implement the typed trusted interfaces against concrete verified protocols. Missing or malformed methods hold the allocation; they never enable a pretend purchase or burn.
+The repository supplies the coordinator, validation, journal, and deterministic tests. The published dev wallet is pinned, but no $POG mint address, signing key, live bridge, DEX route, funded account, or deployed transaction implementation is supplied. A deployment must implement the typed trusted interfaces against concrete verified protocols. Missing or malformed methods hold the allocation; they never enable a pretend purchase or burn.
 
 `createBuybackWorker(db, options)` takes `BuybackOptions`:
 
@@ -17,7 +17,7 @@ The repository supplies the coordinator, validation, journal, and deterministic 
 - `swap`: `PogSwapAdapter`, including `verifyTarget`, `quote`, `submit`, and `reconcile`.
 - `burn`: `PogBurnAdapter` implementing SPL `BurnChecked` for the pinned mint and token program, with finalized transaction and supply-delta evidence.
 
-`verifyTarget` is a read-only, trusted mint and signer check. It must verify the Solana genesis/network, mint account owner/token program, mint decimals, buyback wallet, and address controlled by the injected signer. It runs before each new irreversible stage. A configuration string alone is not ownership or mint evidence. The public `targetVerifiedAt` is set only after a separately reconciled finalized purchase matches all target identities.
+`verifyTarget` is a read-only, trusted mint and signer check. It must verify the Solana genesis/network, mint account owner/token program, mint decimals, published dev wallet, and address controlled by the injected signer. It runs before each new irreversible stage. A configuration string alone is not ownership or mint evidence. The public `targetVerifiedAt` is set only after a separately reconciled finalized purchase matches all target identities.
 
 Worker implementations receive a role-scoped treasury credential capability from the private process composition. They must never accept raw keys, arbitrary calldata, target addresses, or payout assertions from an HTTP request. Secrets, signed transaction bytes, quotes, and internal requests are omitted from `list()` and `listBuybackJobs(db)`.
 
@@ -27,14 +27,14 @@ The coordinator persists each stable operation ID and its complete request **bef
 
 | Stage                       | Required evidence before advancing                                                                                                                                                                                                          |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `reserved` → `transferring` | Fresh route quote binds the child source amount, asset and network to SOL and the published buyback wallet. Mint and signer check passes.                                                                                                   |
+| `reserved` → `transferring` | Fresh route quote binds the child source amount, asset and network to SOL and the published dev wallet. Mint and signer check passes.                                                                                                       |
 | `transferring` → `funded`   | Finalized source debit and destination SOL credit, correct source claim reference and Solana wallet, actual received lamports meeting the persisted minimum. Source debit includes gas and fees and cannot exceed the 20% child allocation. |
-| `funded` → `buying`         | Fresh quote for exact SOL input, pinned POG mint, buyback wallet and allowlisted router program. The input leaves twice the maximum Solana fee budget for purchase and burn.                                                                |
-| `buying` → `bought`         | Finalized purchase from and to the buyback wallet; exact mint, token program, decimals and router program; bounded realized SOL debit/fees; actual acquired tokens meeting the persisted minimum.                                           |
+| `funded` → `buying`         | Fresh quote for exact SOL input, pinned POG mint, dev wallet and allowlisted router program. The input leaves twice the maximum Solana fee budget for purchase and burn.                                                                    |
+| `buying` → `bought`         | Finalized purchase from and to the dev wallet; exact mint, token program, decimals and router program; bounded realized SOL debit/fees; actual acquired tokens meeting the persisted minimum.                                               |
 | `bought` → `burning`        | Enough residual branch SOL remains for bounded burn fees; request burns exactly the acquired token amount through the reviewed SPL burn adapter.                                                                                            |
 | `burning` → `completed`     | Finalized transaction-attributed wallet decrease **and mint total-supply decrease**, each exactly equal to the acquired amount. Correct mint, token program and signer, with fees inside the branch reserve.                                |
 
-A transfer to the published buyback wallet, a sink address, a burn-like event, or a successful receipt alone is insufficient. The burn adapter must prove the `BurnChecked` transaction caused the supply reduction, rather than compare unrelated state snapshots. If the mint/account cannot be burned by the verified signer, the burn binding remains unavailable and no new source transfer starts. [Solana's burn documentation](https://solana.com/docs/tokens/basics/burn-tokens) describes the token-account and mint-supply effects.
+A transfer to the published dev wallet, a sink address, a burn-like event, or a successful receipt alone is insufficient. The burn adapter must prove the dev wallet's `BurnChecked` transaction caused the supply reduction, rather than compare unrelated state snapshots. If the mint/account cannot be burned by the verified signer, the burn binding remains unavailable and no new source transfer starts. [Solana's burn documentation](https://solana.com/docs/tokens/basics/burn-tokens) describes the token-account and mint-supply effects.
 
 The coordinator commits evidence identities and stage changes atomically. EVM **source** transaction hashes are lowercased; Solana destination, purchase and burn signatures remain case-sensitive. A single transaction cannot fund two allocations. Compare-and-swap revisions prevent two workers from submitting the same stage. The rotating bounded queue continues past held jobs so one unsupported route cannot starve others.
 
@@ -62,7 +62,7 @@ The composition root records each router outbox child with `worker.recordClaim(l
 
 `runOnce()` processes a bounded fair batch independently from the Coinbase gift pipeline. `list()` returns sanitized jobs. `listBuybackJobs(db)` reads persisted history without requiring current target configuration or credentials.
 
-A process crash after the stage reservation but before adapter submission is deliberately ambiguous to the coordinator. The adapter's durable journal must resolve it; the worker will not invent a replacement transaction or silently clear the reservation. A durable singleton pins the official target at worker initialization. Changing its chain, mint, token program, decimals, or buyback wallet rejects worker construction before any action; target configuration cannot silently switch across allocations. Missing evidence, expired quotes, wrong destinations, excessive debit, unsupported burn methods and provider errors retain the job and its residuals for verified recovery.
+A process crash after the stage reservation but before adapter submission is deliberately ambiguous to the coordinator. The adapter's durable journal must resolve it; the worker will not invent a replacement transaction or silently clear the reservation. A durable singleton pins the official target at worker initialization. Changing its chain, mint, token program, decimals, or dev wallet rejects worker construction before any action; target configuration cannot silently switch across allocations. Missing evidence, expired quotes, wrong destinations, excessive debit, unsupported burn methods and provider errors retain the job and its residuals for verified recovery.
 
 ## Validation
 

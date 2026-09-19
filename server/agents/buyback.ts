@@ -264,12 +264,12 @@ export function createBuybackWorker(db: DatabaseSync, options: BuybackOptions) {
   address(target.tokenProgramId);
   if (
     target.chain !== 'solana' ||
-    target.devWallet !== publicAddresses.buybackWallet ||
+    target.devWallet !== publicAddresses.devWallet ||
     !Number.isInteger(target.tokenDecimals) ||
     target.tokenDecimals < 0 ||
     target.tokenDecimals > 18
   )
-    throw new Error('Pinned Solana mint and published buyback wallet required');
+    throw new Error('Pinned Solana mint and published dev wallet required');
   if (
     !Number.isInteger(policy.maxSlippageBps) ||
     policy.maxSlippageBps < 0 ||

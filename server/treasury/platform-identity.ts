@@ -1,7 +1,7 @@
 import bs58 from 'bs58';
 import { publicAddresses } from './public-addresses.ts';
 
-/** Public shape of the verified Solana $POG mint and buyback wallet. */
+/** Public shape of the verified Solana $POG mint and developer wallet. */
 export interface PlatformIdentity {
   chain: 'solana';
   address: string;
@@ -31,7 +31,7 @@ export function validPlatformTarget(target: {
   return (
     target.chain === 'solana' &&
     validSolanaAddress(target.mintAddress) &&
-    target.devWallet === publicAddresses.buybackWallet &&
+    target.devWallet === publicAddresses.devWallet &&
     validSolanaAddress(target.tokenProgramId) &&
     Number.isInteger(target.tokenDecimals) &&
     target.tokenDecimals >= 0 &&

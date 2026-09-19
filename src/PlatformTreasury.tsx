@@ -51,9 +51,9 @@ export function PlatformTreasury({
           </a>
         </p>
         <p>
-          Solana buyback and burn wallet:{' '}
-          <a href={`https://solscan.io/account/${publicAddresses.buybackWallet}`}>
-            <code>{publicAddresses.buybackWallet}</code>
+          $POG dev wallet for buybacks and burns:{' '}
+          <a href={`https://solscan.io/account/${publicAddresses.devWallet}`}>
+            <code>{publicAddresses.devWallet}</code>
           </a>
         </p>
         <small>
@@ -68,7 +68,7 @@ export function PlatformTreasury({
               Verified mint <code>{token.address}</code>
             </p>
             <p>
-              Buyback and burn wallet <code>{token.devWallet}</code>
+              Dev wallet <code>{token.devWallet}</code>
             </p>
           </div>
           <p className="tv-treasury-note">

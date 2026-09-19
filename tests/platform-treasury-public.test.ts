@@ -12,7 +12,7 @@ import { publicAddresses } from '../server/treasury/public-addresses.ts';
 const target: BuybackTarget = {
   chain: 'solana',
   mintAddress: bs58.encode(new Uint8Array(32).fill(11)),
-  devWallet: publicAddresses.buybackWallet,
+  devWallet: publicAddresses.devWallet,
   tokenProgramId: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
   tokenDecimals: 18,
 };

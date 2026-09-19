@@ -258,7 +258,7 @@ test('official POG shows exact Solana native amounts without invented USD prices
     symbol: 'POG',
     chain: 'solana',
     address: 'So11111111111111111111111111111111111111112',
-    devWallet: '5c8eKW6Xw4magTChnPUMRN6xctGgeSDrMXrwzmtL8N3S',
+    devWallet: 'AHshYUULwYdZjYTkrNmgqRUXCfnzdKZZZNgByJqxJGjY',
     tokenProgramId: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
     tokenDecimals: 9,
     verifiedAt: '2026-09-18T12:00:00Z',
@@ -273,7 +273,7 @@ test('official POG shows exact Solana native amounts without invented USD prices
   assert.match(html, /Solana/);
   assert.match(html, /1.23456789 SOL/);
   assert.match(html, /1.000000001/);
-  assert.match(html, /Buyback and burn wallet/);
+  assert.match(html, /Dev wallet/);
   assert.match(html, /solscan/);
   assert.doesNotMatch(html, /Market cap|TokenPriceChart/);
   const unconfigured = renderToStaticMarkup(createElement(PlatformTreasury, { token: null }));
