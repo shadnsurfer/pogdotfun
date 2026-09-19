@@ -1,0 +1,168 @@
+<!doctype html>
+<!-- Reduced September 16 observed structure, NOT a captured or authenticated Twitch session. -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Offline Twitch checkout structure fixture</title>
+    <style>
+      [hidden] {
+        display: none !important;
+      }
+      body {
+        font: 16px sans-serif;
+      }
+      button {
+        min-width: 44px;
+        min-height: 32px;
+      }
+      #account-wrapper {
+        width: 0;
+        height: 0;
+        position: relative;
+      }
+      #account-menu {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 180px;
+        background: white;
+        padding: 12px;
+      }
+      .quantity-card {
+        display: inline-block;
+        padding: 16px;
+      }
+      iframe {
+        width: 640px;
+        height: 400px;
+      }
+    </style>
+  </head>
+  <body>
+    <nav data-a-target="top-nav-container">
+      <button data-a-target="user-menu-toggle">
+        <svg aria-hidden="true" width="16" height="16"><circle cx="8" cy="8" r="7" /></svg>
+      </button>
+    </nav>
+    <div id="account-wrapper" role="dialog" hidden>
+      <div id="account-menu" data-a-target="dropdown-main" aria-label="User Menu Options">
+        <span id="donor">pogdotfun</span>
+      </div>
+    </div>
+    <h1>cloverreggie</h1>
+    <button id="open-gifts">Gift a Sub</button>
+    <section role="dialog" aria-label="Gift a Sub" id="gifts" hidden>
+      <label
+        >Gift to the Community<select>
+          <option>Tier 1 Gifts</option>
+          <option>Tier 2 Gifts</option>
+        </select></label
+      >
+      <div id="cards">
+        <div class="quantity-card" id="one-card">
+          <div><span id="one-caption">Gift 1 Sub</span></div>
+          <img
+            id="one-art"
+            alt="Gift 1 Sub at random."
+            src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Crect width='32' height='32'/%3E%3C/svg%3E"
+          />
+          <button id="one-button">
+            <svg aria-hidden="true" width="16" height="16"><path d="M0 8h16" /></svg>
+          </button>
+          <span>HK$31.99</span>
+        </div>
+        <div class="quantity-card" id="ten-card">
+          <span>Gift 10 Subs</span
+          ><img
+            alt="Gift 10 Subs at random."
+            src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'/%3E"
+          />
+          <button id="ten-button">HK$319.90</button>
+        </div>
+        <div id="custom-card" class="quantity-card">
+          <div>
+            <div>
+              <input
+                type="number"
+                min="1"
+                max="200"
+                value="10"
+                aria-labelledby="custom-gifting-option-input-label"
+              />
+            </div>
+            <div id="custom-gifting-option-input-label">
+              <strong>Custom Quantity</strong>
+              <p>(Max 200)</p>
+            </div>
+          </div>
+          <div>
+            <button id="custom-button">
+              <svg aria-hidden="true" width="16" height="16"></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+    <script>
+      const config = __POG_FIXTURE_CONFIG__;
+      const wrapper = document.querySelector('#account-wrapper');
+      const gifts = document.querySelector('#gifts');
+      document.querySelector('#donor').textContent = config.donor || 'pogdotfun';
+      if (config.duplicateAccount)
+        document.querySelector('nav').append(document.querySelector('nav button').cloneNode(true));
+      if (config.duplicateCaption)
+        document
+          .querySelector('#cards')
+          .append(document.querySelector('#one-card').cloneNode(true));
+      if (config.duplicateCardButton)
+        document.querySelector('#one-card').append(document.createElement('button'));
+      if (config.wrongArtwork) document.querySelector('#one-art').alt = 'Gift 10 Subs at random.';
+      document.querySelector('nav button').addEventListener('click', () => {
+        wrapper.hidden = false;
+      });
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') wrapper.hidden = true;
+      });
+      document.querySelector('#open-gifts').addEventListener('click', () => {
+        gifts.hidden = false;
+      });
+      function openReview(quantity, event) {
+        window.fixtureEvent(event);
+        setTimeout(() => {
+          for (let i = 0; i < (config.frameCount || 1); i++) {
+            const iframe = document.createElement('iframe');
+            iframe.title = 'Synthetic payment review';
+            iframe.src =
+              (config.frameOrigin || 'https://checkout.twitch.tv') +
+              '/fixture-checkout?index=' +
+              i +
+              '&quantity=' +
+              quantity;
+            document.body.append(iframe);
+          }
+        }, config.frameDelayMs || 0);
+      }
+      document
+        .querySelector('#one-button')
+        .addEventListener('click', () => openReview(1, 'quantity-one'));
+      document
+        .querySelector('#ten-button')
+        .addEventListener('click', () => openReview(10, 'quantity-ten'));
+      document
+        .querySelector('#custom-button')
+        .addEventListener('click', () =>
+          openReview(Number(document.querySelector('#custom-card input').value), 'quantity-custom'),
+        );
+      if (config.duplicateCustom)
+        document
+          .querySelector('#cards')
+          .append(document.querySelector('#custom-card').cloneNode(true));
+      if (config.duplicateCustomButton)
+        document.querySelector('#custom-card').append(document.createElement('button'));
+      if (config.customValueReset)
+        document.querySelector('#custom-card input').addEventListener('input', (event) => {
+          event.target.value = '10';
+        });
+    </script>
+  </body>
+</html>

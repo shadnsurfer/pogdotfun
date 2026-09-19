@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.data/
+.env
+.env.*
+!.env.example
+*.tsbuildinfo
+.DS_Store
+.vercel/
+tmp/
+output/
+reports/
+*.db
+*.db-wal
+*.db-shm
+*.key
+*.pem

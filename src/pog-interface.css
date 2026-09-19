@@ -1,0 +1,225 @@
+/* Pog's rounded controls, raised actions and coordinated entrance rhythm. */
+:root {
+  --pog-enter-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+.home-page {
+  padding-top: 40px;
+}
+.home-intro {
+  margin-bottom: 44px;
+}
+.home-intro > :not(.hero-coin) {
+  position: relative;
+  z-index: 1;
+}
+.home-intro .hero-coin {
+  z-index: 0;
+}
+.home-intro .hero-payment {
+  margin-bottom: 24px;
+}
+.home-intro .hero-support-note {
+  max-width: 340px;
+  margin-top: 18px;
+  font-size: 12px;
+  line-height: 1.65;
+}
+.hero-coin-fees {
+  rotate: -8deg;
+}
+.hero-coin-channel {
+  rotate: 8deg;
+}
+.streamer-profile-card {
+  min-width: 0;
+}
+.streamer-profile-top .avatar,
+.streamer-profile-top .platform-mark {
+  flex: none;
+}
+.streamer-profile-top strong,
+.streamer-profile-top small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.btn-secondary {
+  background: var(--pog-raised);
+  border-color: #393940;
+  box-shadow: 0 3px 0 #09090b;
+}
+.btn-secondary:hover {
+  background: #27272d;
+  border-color: #4b4b55;
+  box-shadow: 0 5px 0 #09090b;
+}
+.btn-secondary:active {
+  box-shadow: 0 1px 0 #09090b;
+}
+.sidebar .nav-link {
+  position: relative;
+  border-radius: 10px;
+  font-weight: 750;
+  margin: 3px 0;
+  transition:
+    background 180ms,
+    color 180ms;
+}
+.sidebar .nav-link.active {
+  background: #221c2b;
+  color: var(--pog-ice);
+}
+.sidebar .nav-link.active::before {
+  content: '';
+  position: absolute;
+  left: -9px;
+  top: 14px;
+  bottom: 14px;
+  width: 3px;
+  border-radius: 4px;
+  background: #ae83ff;
+}
+.sidebar .nav-link.active > svg {
+  color: #c1a0ff;
+}
+/* Opacity-only header motion preserves the containing blocks of navigation/dialogs.
+   Entrances use backwards fill so completed animations cannot override hover/layout. */
+@media (prefers-reduced-motion: no-preference) {
+  .topbar {
+    animation: pog-fade-in 360ms var(--pog-enter-ease) backwards;
+  }
+  #main > .page:not(.route-loading) {
+    animation: pog-page-enter 480ms var(--pog-enter-ease) backwards;
+  }
+  .home-intro > :not(.hero-coin),
+  .preview-grid > .preview-tile {
+    animation: pog-page-enter 560ms var(--enter-delay, 0ms) var(--pog-enter-ease) backwards;
+  }
+  .home-intro > h1 {
+    --enter-delay: 60ms;
+  }
+  .home-intro > p {
+    --enter-delay: 120ms;
+  }
+  .home-intro > .hero-actions {
+    --enter-delay: 180ms;
+  }
+  .home-intro > .hero-support-note {
+    --enter-delay: 220ms;
+  }
+  .hero-coin {
+    animation: pog-coin-enter 650ms 120ms var(--pog-enter-ease) backwards;
+  }
+  .hero-coin-channel {
+    animation-delay: 180ms;
+  }
+  .preview-grid > .preview-tile:nth-child(1) {
+    --enter-delay: 120ms;
+  }
+  .preview-grid > .preview-tile:nth-child(2) {
+    --enter-delay: 165ms;
+  }
+  .preview-grid > .preview-tile:nth-child(3) {
+    --enter-delay: 210ms;
+  }
+  .preview-grid > .preview-tile:nth-child(4) {
+    --enter-delay: 255ms;
+  }
+  .preview-grid > .preview-tile:nth-child(5) {
+    --enter-delay: 300ms;
+  }
+  .home-directory,
+  .home-recent,
+  .home-token-grid > .token-card,
+  .streamer-list > .streamer-profile-card,
+  .home-payment-list > .home-payment-row {
+    animation: pog-fade-in 520ms var(--pog-enter-ease) backwards;
+  }
+  .home-token-grid > .token-card:nth-child(2),
+  .streamer-list > .streamer-profile-card:nth-child(2),
+  .home-payment-list > .home-payment-row:nth-child(2) {
+    animation-delay: 45ms;
+  }
+  .home-token-grid > .token-card:nth-child(n + 3),
+  .streamer-list > .streamer-profile-card:nth-child(n + 3),
+  .home-payment-list > .home-payment-row:nth-child(n + 3) {
+    animation-delay: 90ms;
+  }
+  .btn-secondary:hover {
+    transform: translateY(-2px);
+  }
+  .btn-secondary:active {
+    transform: translateY(2px);
+  }
+}
+@keyframes pog-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes pog-page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(9px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes pog-coin-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@media (max-width: 640px) {
+  .home-page {
+    padding-top: 30px;
+  }
+  .home-intro {
+    margin-bottom: 34px;
+  }
+  .home-intro .hero-payment {
+    margin-bottom: 22px;
+  }
+  .home-intro .hero-support-note {
+    max-width: 310px;
+    font-size: 11px;
+    margin-top: 17px;
+  }
+}
+@media (max-width: 360px) {
+  .streamer-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .hero-actions {
+    gap: 8px;
+  }
+  .hero-actions .btn {
+    padding: 11px 15px;
+    font-size: 12px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn:hover,
+  .btn:active,
+  .token-card:hover .token-art-link > img {
+    transform: none;
+  }
+  .sidebar .nav-link {
+    transition: none;
+  }
+}
+.btn:disabled,
+.btn[aria-disabled='true'] {
+  transform: none;
+  box-shadow: none;
+}

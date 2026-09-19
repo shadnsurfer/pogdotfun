@@ -1,0 +1,16 @@
+# Local credentials, ledger data, and deployment metadata must never be uploaded.
+.data/
+.env
+.env.*
+!.env.example
+.git/
+.vercel/
+node_modules/
+dist/
+design/
+output/
+tmp/
+reports/
+docs/
+*.tsbuildinfo
+.DS_Store

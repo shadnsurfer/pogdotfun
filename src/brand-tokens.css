@@ -1,0 +1,26 @@
+@font-face {
+  font-family: 'Nunito';
+  src: url('/assets/fonts/nunito-latin-variable.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 600 900;
+  font-display: swap;
+}
+
+/* Pog brand kit v1.0. Fees and launch use Volt; channels and gifts use Ultra. */
+:root {
+  --pog-black: #0e0e10;
+  --pog-surface: #16161a;
+  --pog-raised: #1f1f23;
+  --pog-line: #26262b;
+  --pog-muted: #6b6b75;
+  --pog-text-2: #a9a9b3;
+  --pog-ice: #f7f7f8;
+  --pog-volt: #53fc18;
+  --pog-volt-deep: #2fb300;
+  --pog-ultra: #9146ff;
+  --pog-ultra-deep: #6a2bd9;
+  --pog-font: 'Nunito', system-ui, sans-serif;
+  --pog-radius-card: 14px;
+  --pog-radius-hero: 18px;
+  --pog-radius-pill: 999px;
+}

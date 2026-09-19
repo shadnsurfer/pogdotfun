@@ -1,0 +1,44 @@
+<!doctype html>
+<!-- Synthetic payment review: invented test card/quote; no provider integration. -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Offline checkout fixture</title>
+  </head>
+  <body>
+    <div id="product">Gift 1 Tier 1 Subscription to cloverreggie's community</div>
+    <div>Subtotal</div>
+    <div>HK$31.99</div>
+    <div>Tax</div>
+    <div>HK$4.21</div>
+    <div>Total</div>
+    <div id="total">HK$36.20</div>
+    <input type="radio" aria-label="Visa ending in 5183" checked />
+    <button>Complete Purchase</button>
+    <script>
+      const config = __POG_FIXTURE_CONFIG__;
+      const card = document.querySelector('input');
+      card.setAttribute('aria-label', 'Visa ending in ' + (config.cardLast4 || '5183'));
+      const quantity =
+        config.quantity || Number(new URLSearchParams(location.search).get('quantity')) || 1;
+      if (quantity)
+        document.querySelector('#product').textContent =
+          `Gift ${quantity} Tier 1 Subscriptions to cloverreggie's community`;
+      document.querySelector('#total').textContent = config.total || 'HK$36.20';
+      if (config.recipient)
+        document.querySelector('#product').textContent =
+          `Gift 1 Tier 1 Subscription to ${config.recipient}'s community`;
+      if (config.duplicateSelectedCard) document.body.append(card.cloneNode(true));
+      if (config.duplicatePurchaseButton)
+        document.body.append(document.querySelector('button').cloneNode(true));
+      document.querySelector('button').addEventListener('click', async () => {
+        await window.fixtureEvent('purchase');
+        if (config.ambiguousSubmit) {
+          location.href = 'https://untrusted.invalid/fixture-result';
+        } else {
+          document.body.textContent = `Purchase Successful\nYou have gifted ${quantity} Tier 1 subscriptions to cloverreggie's community!`;
+        }
+      });
+    </script>
+  </body>
+</html>

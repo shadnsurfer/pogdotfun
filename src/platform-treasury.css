@@ -1,0 +1,52 @@
+.platform-treasury {
+  margin-bottom: 20px;
+  display: grid;
+  gap: 16px;
+}
+.platform-treasury h2,
+.platform-treasury h3 {
+  margin: 0;
+}
+.platform-treasury h3 {
+  font-size: 15px;
+  font-weight: 700;
+}
+.platform-addresses {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+.platform-addresses a {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--pog-text-2);
+  font-size: 12px;
+}
+.platform-addresses code {
+  color: var(--pog-volt);
+  overflow-wrap: anywhere;
+}
+.platform-treasury .tv-treasury-metrics strong {
+  overflow-wrap: anywhere;
+}
+.ops-platform .ops-form {
+  max-width: 660px;
+}
+.ops-platform .ops-form fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+.ops-platform .ops-task-facts {
+  margin: 16px 0;
+}
+
+@media (max-width: 480px) {
+  .platform-market-metrics > div:first-child {
+    grid-column: 1 / -1;
+  }
+}

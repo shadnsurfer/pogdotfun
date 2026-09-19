@@ -1,0 +1,11 @@
+# Reduced checkout browser fixtures
+
+These hand-written fixtures reconstruct the relevant **September 16, 2026 observed structures**: an unnamed account button, zero-size outer dialog with visible menu content, exact quantity caption beside an unnamed button, quantity artwork and a checkout iframe. They are **not captured pages, authenticated live evidence, or a complete Twitch implementation**. The payment review, test card ending `5183`, totals, delayed load and success/ambiguity responses are synthetic.
+
+`npm run test:checkout-browser` runs the real production driver against actual Playwright locators, layout/visibility and iframe origins in a separate headless Chromium process. It never attaches to the user's browser or loads a saved profile. Every context request is fulfilled from these fixtures or aborted, WebSockets are closed, service workers are blocked, and the browser has an unreachable proxy as an additional network boundary. No Twitch, Browserbase, card or other provider API is called. All purchase clicks are local fixture events.
+
+The harness uses the existing `playwright-core` dependency and an already installed browser. Set `POG_CHECKOUT_TEST_CHROMIUM` to an existing executable if needed; otherwise it checks Playwright's expected installed executable and standard Chrome/Chromium executable paths. Missing browsers fail explicitly and are never installed automatically. The suite is separate from the default unit-test glob.
+
+The original named-button strategy was first run unguarded and failed with a real Playwright `TimeoutError`; its expected failure is retained as a regression characterization. The current driver must prepare the same reduced structure without clicking **Complete Purchase**. Wrong donor/quantity/card, duplicate controls or frames, untrusted origins, ownership loss and ambiguous post-click navigation are covered. Passing these tests proves behavior on these reduced structures, not authenticated Twitch acceptance or complete durable recovery (covered separately by coordinator tests).
+
+Routing and isolated-context behavior follow the [Playwright BrowserContext documentation](https://playwright.dev/docs/api/class-browsercontext#browser-context-route); browser startup follows the [BrowserType documentation](https://playwright.dev/docs/api/class-browsertype#browser-type-launch).

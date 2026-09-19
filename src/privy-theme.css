@@ -1,0 +1,69 @@
+/* Scope SDK overrides to Privy's stable modal IDs, preserving wallet branding. */
+#privy-modal-content {
+  --privy-color-background: var(--pog-surface);
+  --privy-color-background-2: var(--pog-raised);
+  --privy-color-background-hover: #25252b;
+  --privy-color-background-clicked: var(--pog-raised);
+  --privy-color-background-interactive: var(--pog-volt);
+  --privy-color-background-interactive-hover: #73fc43;
+  --privy-color-background-interactive-clicked: var(--pog-volt-deep);
+  --privy-color-foreground: var(--pog-ice);
+  --privy-color-foreground-2: var(--pog-text-2);
+  --privy-color-foreground-3: var(--pog-text-2);
+  --privy-color-foreground-4: var(--pog-line);
+  --privy-color-foreground-accent: var(--pog-black);
+  --privy-color-foreground-interactive: var(--pog-volt);
+  --privy-color-foreground-interactive-hover: #73fc43;
+  --privy-color-border-default: var(--pog-line);
+  --privy-color-border-hover: #414149;
+  --privy-color-border-focus: var(--pog-volt);
+  --privy-color-border-interactive: var(--pog-volt);
+  --privy-color-accent: var(--pog-volt);
+  --privy-color-accent-dark: var(--pog-volt-deep);
+  --privy-color-accent-light: #73fc43;
+  --privy-color-accent-hover: #213b1b;
+  --privy-color-icon-interactive: var(--pog-volt);
+  --privy-color-icon-inverse: var(--pog-black);
+  --privy-border-radius-sm: 12px;
+  --privy-border-radius-md: var(--pog-radius-card);
+  --privy-border-radius-lg: var(--pog-radius-hero);
+  --privy-link-navigation-color: var(--pog-volt);
+  border: 1px solid var(--pog-line);
+  color: var(--pog-ice);
+  font-family: var(--pog-font);
+  box-shadow: 0 24px 80px #0009;
+}
+
+#privy-modal-content :is(button, input, h1, h2, h3, p, a, span, div) {
+  font-family: var(--pog-font);
+}
+
+#privy-modal-content :is(h2, h3) {
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+
+#privy-modal-content .login-method-button {
+  min-height: 54px;
+  border-radius: 12px;
+  font-weight: 700;
+}
+
+#privy-modal-content :is(button, a, input):focus-visible {
+  outline: 2px solid var(--pog-volt);
+  outline-offset: 3px;
+  box-shadow: none;
+}
+
+#privy-modal-content .pog-privy-logo {
+  width: 64px !important;
+  height: 64px !important;
+  object-fit: contain;
+  border-radius: 0;
+  background: transparent;
+}
+
+#privy-dialog-backdrop {
+  background: #0009;
+  backdrop-filter: blur(8px);
+}

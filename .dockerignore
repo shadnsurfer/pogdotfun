@@ -1,0 +1,8 @@
+# Only the backend runtime and locked dependency manifests enter the build context.
+**
+!package.json
+!package-lock.json
+!server/
+!server/**
+!Dockerfile
+!.dockerignore

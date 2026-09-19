@@ -1,0 +1,8 @@
+/* Keep native image layout and a local placeholder while remote artwork is pending. */
+img.token-image[data-image-state='loading'] {
+  background: var(--pog-raised, #1c1c21) url('/assets/brand/mark.svg') center / 32% auto no-repeat;
+}
+img.token-image[data-image-state='fallback'] {
+  object-fit: contain;
+  background-color: var(--pog-raised, #1c1c21);
+}

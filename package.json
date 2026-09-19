@@ -1,0 +1,76 @@
+{
+  "name": "pog",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "packageManager": "npm@10.9.8",
+  "engines": {
+    "node": ">=22.19"
+  },
+  "scripts": {
+    "dev": "concurrently -k -n web,api -c green,magenta \"vite --host 127.0.0.1\" \"tsx watch server/index.ts\"",
+    "dev:web": "vite --host 127.0.0.1",
+    "dev:api": "tsx watch server/index.ts",
+    "start:api": "node --import tsx server/index.ts",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "tsx --test tests/*.test.ts",
+    "test:checkout-browser": "tsx --test tests/browser/twitch-checkout.browser.test.ts",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check:source": "node scripts/check-source.mjs",
+    "export:source": "node scripts/export-source.mjs"
+  },
+  "dependencies": {
+    "@metamask/connect-solana": "^2.1.1",
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@phosphor-icons/react": "^2.1.10",
+    "@privy-io/node": "^0.34.0",
+    "@privy-io/react-auth": "^3.43.0",
+    "@pump-fun/pump-sdk": "^2.0.0",
+    "@pump-fun/pump-swap-sdk": "^1.20.0",
+    "@radix-ui/react-dialog": "^1.1.23",
+    "@radix-ui/react-tabs": "^1.1.21",
+    "@radix-ui/react-tooltip": "^1.2.16",
+    "@solana-program/memo": "^0.10.0",
+    "@solana-program/system": "^0.10.0",
+    "@solana-program/token": "^0.9.0",
+    "@solana/kit": "^5.5.1",
+    "@solana/spl-token": "^0.4.15",
+    "@solana/web3.js": "^1.99.0",
+    "ajv": "^8.20.0",
+    "bs58": "^6.0.0",
+    "lightweight-charts": "5.2.1",
+    "mailauth": "^5.0.3",
+    "mailparser": "^3.9.28",
+    "motion": "^13.3.0",
+    "multiformats": "^14.0.5",
+    "pdf-lib": "^1.17.1",
+    "playwright-core": "1.63.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.6.0",
+    "sharp": "0.35.4",
+    "tsx": "^4.23.13",
+    "viem": "^2.47.18"
+  },
+  "overrides": {
+    "mailauth": {
+      "nodemailer": "9.1.1",
+      "joi": "18.2.9"
+    }
+  },
+  "devDependencies": {
+    "@types/mailparser": "^3.4.6",
+    "@types/node": "^22.15.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "@vitejs/plugin-react": "^4.4.0",
+    "concurrently": "^9.1.2",
+    "prettier": "^3.9.6",
+    "typescript": "~5.8.3",
+    "vite": "^6.3.0"
+  },
+  "description": "POG autonomous token-fee-funded streamer support",
+  "license": "MIT"
+}
